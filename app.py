@@ -35,7 +35,7 @@ st.markdown(
 st.markdown(
     f"""
     <div style='text-align: center; color: #BBBBBB; font-size: 0.95rem;'>
-        {st.session_state.city_key} (Lat: {st.session_state.lat:.4f}, Lon: {st.session_state.lon:.4f})
+        Current Location: {st.session_state.city_key}
     </div>
     """,
     unsafe_allow_html=True
@@ -51,7 +51,7 @@ st.markdown(
 st.markdown(
     """
     <div style='text-align: center; color: #666666; font-size: 0.8rem; margin-top: 0.3rem;'>
-        v2.0.0
+        v2.1.1
     </div>
     """,
     unsafe_allow_html=True
@@ -77,7 +77,7 @@ tor_count = tor_count_cached(year)
 
 with col1:
     st.metric(
-        label=f"US Tornado Warnings (YTD {year})",
+        label=f"U.S. Tornado Warning Counter (YTD {year})",
         value=tor_count
     )
 
@@ -187,7 +187,6 @@ with tab_home:
     r3[0].metric("D3 PROB", fmt(nums.get("d3_prob")))
     r3[1].empty()
     r3[2].empty()
-   
 with tab_observations:
     st.subheader("Observations")
     st.info("Coming soon: radar, satellite, and surface obs for your location.")
