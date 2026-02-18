@@ -1,6 +1,8 @@
 import re
 import requests
 
+
+
 SPC_BASE = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer"
 
 HEADERS = {
@@ -150,30 +152,34 @@ def point_day1_3_category(lat: float, lon: float, day: str) -> str:
     return best if best else "NONE"
 
 def point_day_prob(lat: float, lon: float, day: str) -> int | None:
-    """
-    For Day 4–7 probabilistic outlooks: returns the highest percent polygon containing the point.
-    Typical values: 15/30/45.
-    """
-    layer_id = find_layer_id(day, "Probabilistic")
-    if layer_id is None:
-        # sometimes called "Probability"
-        layer_id = find_layer_id(day, "Probability")
+    layer_id = find_layer_id(day, "Probabilistic") or find_layer_id(day, "Probability")
     if layer_id is None:
         return None
 
-    gj = layer_geojson(layer_id)
-    best = None
+    url = f"{SPC_BASE}/{layer_id}/query"
+    params = {
+        "f": "json",
+        "geometry": f"{lon},{lat}",
+        "geometryType": "esriGeometryPoint",
+        "inSR": "4326",
+        "spatialRel": "esriSpatialRelIntersects",
+        "outFields": "*",
+        "returnGeometry": "false",
+    }
 
-    for feat in gj.get("features", []) or []:
-        if not point_in_geometry(lon, lat, feat.get("geometry", {})):
-            continue
-        pct = _extract_percent(feat.get("properties", {}) or {})
+    data = _get_json(url, params=params)
+
+    best = None
+    for feat in data.get("features", []) or []:
+        props = feat.get("attributes", {})
+        pct = _extract_percent(props)
         if pct is None:
             continue
         if best is None or pct > best:
             best = pct
 
     return best
+
 
 def get_spc_point_summary(lat: float, lon: float) -> dict:
     """
@@ -205,38 +211,56 @@ def _find_layer_id_any(day_label: str, keywords: list[str]) -> int | None:
     return None
 
 
+   
+
+    
+
+DAY_HAZARD_LAYER_IDS = {
+    "Day 1": {
+        "tornado": 3,
+        "hail": 5,
+        "wind": 7,
+    },
+    "Day 2": {
+        "tornado": 11,
+        "hail": 13,
+        "wind": 15,
+    },
+}
+
 def point_hazard_percent(lat: float, lon: float, day: str, hazard: str) -> int | None:
-    """
-    Returns highest hazard % polygon containing the point for Day 1/2.
-    hazard: "tornado" | "wind" | "hail"
-    """
     hz = hazard.lower()
 
-    # Try common naming patterns in the NOAA service
-    # (service layer names vary; this approach is resilient)
-    layer_id = (
-        _find_layer_id_any(day, [hz, "prob"]) or
-        _find_layer_id_any(day, [hz, "probability"]) or
-        _find_layer_id_any(day, [hz, "probabilistic"]) or
-        _find_layer_id_any(day, [hz])  # last resort
-    )
-
+    layer_id = DAY_HAZARD_LAYER_IDS.get(day, {}).get(hz)
     if layer_id is None:
         return None
 
-    gj = layer_geojson(layer_id)
+    url = f"{SPC_BASE}/{layer_id}/query"
+    params = {
+        "f": "json",
+        "where": "1=1",  # <-- REQUIRED (this is the fix)
+        "geometry": f"{lon},{lat}",
+        "geometryType": "esriGeometryPoint",
+        "inSR": "4326",
+        "spatialRel": "esriSpatialRelIntersects",
+        "outFields": "dn,label",     # keep it small
+        "returnGeometry": "false",
+        "resultRecordCount": "50",
+    }
 
-    best = None
-    for feat in gj.get("features", []) or []:
-        if not point_in_geometry(lon, lat, feat.get("geometry", {})):
-            continue
-        pct = _extract_percent(feat.get("properties", {}) or {})
-        if pct is None:
-            continue
-        if best is None or pct > best:
-            best = pct
+    data = _get_json(url, params=params)
 
-    return best
+    feats = data.get("features", []) or []
+    if not feats:
+        return None
+
+    # dn is the percent bucket; take the max one that intersects
+    best = max(feats, key=lambda f: (f.get("attributes") or {}).get("dn", -999))
+    dn = (best.get("attributes") or {}).get("dn")
+
+    return int(dn) if isinstance(dn, (int, float)) else None
+
+
 
 
 def get_spc_location_percents(lat: float, lon: float) -> dict:
@@ -260,3 +284,5 @@ def get_spc_location_percents(lat: float, lon: float) -> dict:
         "d6_prob": point_day_prob(lat, lon, "Day 6"),
         "d7_prob": point_day_prob(lat, lon, "Day 7"),
     }
+
+

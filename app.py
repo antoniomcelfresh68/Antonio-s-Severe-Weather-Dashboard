@@ -14,6 +14,7 @@ from datetime import datetime
 import streamlit as st
 from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
 
+
 def spc_img(url: str) -> str:
     # cache-bust so it refreshes on reruns without you changing code
     return f"{url}?v=1"
@@ -51,7 +52,7 @@ st.markdown(
 st.markdown(
     """
     <div style='text-align: center; color: #666666; font-size: 0.8rem; margin-top: 0.3rem;'>
-        v2.1.1
+        v2.1.2
     </div>
     """,
     unsafe_allow_html=True
@@ -86,11 +87,6 @@ with col2:
 
 with col3:
     st.empty()  # placeholder for future stat
-
-
-
-
-
 
 tab_home, tab_observations, tab_models, tab_about = st.tabs(["Home", "Observations", "Model Forecasts", "About"])
 
@@ -143,7 +139,8 @@ with tab_home:
     default_index = options.index(default_option)
     left, _ = st.columns([1, 3], gap="large")
 
-    nums = get_spc_location_percents(float(st.session_state.lat), float(st.session_state.lon))
+
+    
 
 
 
