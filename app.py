@@ -13,7 +13,7 @@ from utils.state import set_location
 from datetime import datetime
 import streamlit as st
 from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
-
+from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_ytd
 
 def spc_img(url: str) -> str:
     # cache-bust so it refreshes on reruns without you changing code
@@ -52,7 +52,7 @@ st.markdown(
 st.markdown(
     """
     <div style='text-align: center; color: #666666; font-size: 0.8rem; margin-top: 0.3rem;'>
-        v2.1.2
+        v2.1.3 
     </div>
     """,
     unsafe_allow_html=True
@@ -66,7 +66,7 @@ st.markdown(
 
 st.markdown("---")
 
-col1, col2, col3 = st.columns([2, 1, 1])
+col1, col2 = st.columns([2, 2], gap="large")
 
 year = datetime.utcnow().year
 
@@ -74,19 +74,25 @@ year = datetime.utcnow().year
 def tor_count_cached(y):
     return fetch_tor_warning_count_ytd(year=y)
 
+@st.cache_data(ttl=900)
+def svr_count_cached(y):
+    return fetch_svr_warning_count_ytd(year=y)
+
 tor_count = tor_count_cached(year)
+svr_count = svr_count_cached(year)
 
 with col1:
     st.metric(
-        label=f"U.S. Tornado Warning Counter (YTD {year})",
+        label=f"Tornado Warnings (YTD {year})",
         value=tor_count
     )
 
 with col2:
-    st.empty()  # placeholder for future stat
+    st.metric(
+        label=f"Severe TSTM Warnings (YTD {year})",
+        value=svr_count
+    )
 
-with col3:
-    st.empty()  # placeholder for future stat
 
 tab_home, tab_observations, tab_models, tab_about = st.tabs(["Home", "Observations", "Model Forecasts", "About"])
 
@@ -165,7 +171,7 @@ with tab_home:
     def fmt(x):
         return "0%" if x is None else f"{int(x)}%"
 
-    st.markdown("### SPC % at your location")
+    st.markdown(f"### SPC % at {st.session_state.city_key}")
 
     # Day 1
     r1 = st.columns(3)

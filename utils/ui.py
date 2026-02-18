@@ -60,11 +60,11 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
 div[data-testid="stMetric"] {
     background: linear-gradient(145deg, #111317, #1c1416);
-    padding: 24px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 0, 0, 0.15);
+    padding: 10px;
+    border-radius: 30px;
+    border: 5px solid rgba(255, 100, 0, 0.15);
     box-shadow: 0 0 30px rgba(255, 0, 0, 0.08);
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
 }
 
 div[data-testid="stMetric"]:hover {
@@ -74,7 +74,7 @@ div[data-testid="stMetric"]:hover {
 
 /* Label styling */
 div[data-testid="stMetricLabel"] {
-    font-size: 14px;
+    font-size: 25px;
     text-transform: uppercase;
     letter-spacing: 1.4px;
     opacity: 0.75;
