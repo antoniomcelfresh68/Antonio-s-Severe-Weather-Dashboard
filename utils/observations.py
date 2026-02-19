@@ -1,9 +1,9 @@
 # utils/observations.py
+
 import streamlit as st
 import requests
 from typing import Any, Dict, Optional, Tuple
 import time
-
 
 HEADERS = {
     "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
@@ -19,7 +19,6 @@ def _get_nearest_radar_id(lat: float, lon: float) -> str | None:
         return _safe(points, "properties", "radarStation")
     except Exception:
         return None
-
 
 @st.cache_data(ttl=120, show_spinner=False)
 def _get_json(url: str, timeout: int = 20) -> Dict[str, Any]:

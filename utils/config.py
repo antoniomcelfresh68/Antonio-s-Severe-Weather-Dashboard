@@ -15,20 +15,13 @@ CITY_PRESETS = {
     "Omaha, NE": (41.2565, -95.9345),
     "Lincoln, NE": (40.8136, -96.7026),
     "Des Moines, IA": (41.5868, -93.6250),
-        # Indiana
     "Indianapolis, IN": (39.7684, -86.1581),
     "Fort Wayne, IN": (41.0793, -85.1394),
-
-    # Ohio
     "Columbus, OH": (39.9612, -82.9988),
     "Cincinnati, OH": (39.1031, -84.5120),
     "Dayton, OH": (39.7589, -84.1916),
-
-    # Kentucky
     "Louisville, KY": (38.2527, -85.7585),
     "Lexington, KY": (38.0406, -84.5037),
-
-    # Tennessee
     "Nashville, TN": (36.1627, -86.7816),
     "Memphis, TN": (35.1495, -90.0490),
     "Knoxville, TN": (35.9606, -83.9207),

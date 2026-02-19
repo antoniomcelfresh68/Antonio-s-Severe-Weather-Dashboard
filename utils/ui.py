@@ -1,4 +1,6 @@
 # utils/ui.py
+
+# Global UI styles for the website
 import streamlit as st
 
 def apply_global_ui() -> None:

@@ -1,3 +1,5 @@
+# utils/sidebar.py
+
 import streamlit as st
 from utils.config import CITY_PRESETS
 from utils.state import set_location

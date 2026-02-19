@@ -1,3 +1,5 @@
+# utils/spc.py
+
 import re
 import requests
 import streamlit as st
@@ -6,8 +8,6 @@ import streamlit as st
 def get_spc_location_percents_cached(lat: float, lon: float) -> dict:
     return get_spc_location_percents(lat, lon)
 
-
-
 SPC_BASE = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer"
 
 HEADERS = {
@@ -15,7 +15,6 @@ HEADERS = {
     "Accept": "application/json",
 }
 
-# -------- basic HTTP --------
 def _get_json(url: str, params: dict | None = None, timeout: int = 25) -> dict:
     r = requests.get(url, params=params, headers=HEADERS, timeout=timeout)
     r.raise_for_status()
@@ -58,7 +57,6 @@ def layer_geojson(layer_id: int) -> dict:
     }
     return _get_json(url, params=params)
 
-# -------- geometry: point in polygon (no extra deps) --------
 def _point_in_ring(x: float, y: float, ring: list) -> bool:
     # ray casting
     inside = False
@@ -105,7 +103,6 @@ def point_in_geometry(lon: float, lat: float, geom: dict) -> bool:
         return False
     return False
 
-# -------- outlook interpretation --------
 _CAT_RANK = {"TSTM": 1, "MRGL": 2, "SLGT": 3, "ENH": 4, "MDT": 5, "HIGH": 6}
 
 def _extract_label(props: dict) -> str:
@@ -185,7 +182,6 @@ def point_day_prob(lat: float, lon: float, day: str) -> int | None:
 
     return best
 
-
 def get_spc_point_summary(lat: float, lon: float) -> dict:
     """
     Returns:
@@ -214,11 +210,6 @@ def _find_layer_id_any(day_label: str, keywords: list[str]) -> int | None:
         if day in name and all(k in name for k in keys):
             return int(lyr["id"])
     return None
-
-
-   
-
-    
 
 DAY_HAZARD_LAYER_IDS = {
     "Day 1": {
@@ -264,9 +255,6 @@ def point_hazard_percent(lat: float, lon: float, day: str, hazard: str) -> int |
     dn = (best.get("attributes") or {}).get("dn")
 
     return int(dn) if isinstance(dn, (int, float)) else None
-
-
-
 
 def get_spc_location_percents(lat: float, lon: float) -> dict:
     """

@@ -1,6 +1,6 @@
 # util/home.py
-from datetime import datetime
 
+from datetime import datetime
 import streamlit as st
 from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
 from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_ytd
@@ -19,6 +19,8 @@ def render(
     set_location,
     get_spc_location_percents,
 ):
+    
+
     year = datetime.utcnow().year
     tor_count = tor_count_cached(year)
     svr_count = svr_count_cached(year)

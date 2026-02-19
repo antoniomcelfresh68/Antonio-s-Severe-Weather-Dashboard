@@ -1,3 +1,5 @@
+# app.py
+
 import streamlit as st
 from utils.config import APP_TITLE
 from utils.state import init_state
@@ -16,16 +18,12 @@ from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
 from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_ytd
 import utils.home as home
 from utils.observations import render as render_observations
+import utils.about as about
 
-def spc_img(url: str) -> str:
-    # cache-bust so it refreshes on reruns without you changing code
-    return f"{url}?v=1"
+apply_global_ui()  
+init_state()
 
 st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="expanded")
-
-## Initialize the session state to ensure all necessary variables are set before rendering the app. This function will set default values for the city and its coordinates if they are not already present in the session state.
-apply_global_ui()  # Apply global UI customizations to hide Streamlit's default chrome and adjust spacing.
-init_state()
 
 st.markdown(
     f"""
@@ -54,14 +52,11 @@ st.markdown(
 st.markdown(
     """
     <div style='text-align: center; color: #666666; font-size: 0.8rem; margin-top: 0.3rem;'>
-        v2.2.1 
+        v2.2.2
     </div>
     """,
     unsafe_allow_html=True
 )
-
-
-
 
 nav = st.radio(
     "",
@@ -71,6 +66,8 @@ nav = st.radio(
 )
 
 if nav == "Home":
+    def spc_img(url: str) -> str:
+        return f"{url}?v=1"
     home.render(
         spc_img=spc_img,
         CITY_PRESETS=CITY_PRESETS,
@@ -89,9 +86,5 @@ elif nav == "Model Forecasts":
     st.info("Coming soon: model data (HRRR, GFS) for your location.")
 
 elif nav == "About":
-    st.subheader("About This App")
-    st.markdown(
-        """
-        This dashboard provides a comprehensive view of severe weather risks based on the latest SPC outlooks...
-        """
+    about.render(
     )
