@@ -1,7 +1,7 @@
 # utils/ui.py
 
-# Global UI styles for the website
 import streamlit as st
+from textwrap import dedent
 
 def apply_global_ui() -> None:
     st.markdown(
@@ -88,8 +88,82 @@ div[data-testid="stMetricValue"] {
     font-weight: 800;
     color: #ff3b3b;
 }
+/* ============================= */
+/* Observations detail cards     */
+/* ============================= */
+
+.obs-card{
+  border-radius: 30px;                 /* match your metric radius */
+  padding: 22px 26px;
+  background: linear-gradient(145deg, #111317, #1c1416);  /* match stMetric */
+  border: 5px solid rgba(255, 100, 0, 0.15);             /* match stMetric */
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.08);            /* match stMetric */
+  transition: all 0.4s ease;
+  min-height: 140px;
+}
+
+.obs-card:hover{
+  border: 1px solid rgba(255, 60, 60, 0.6);
+  box-shadow: 0 0 40px rgba(255, 0, 0, 0.18);
+}
+
+.obs-card-title{
+  font-size: 22px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  opacity: .75;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.obs-card-value{
+  font-size: 42px;
+  font-weight: 800;
+  color: #ff3b3b;     /* match metric number color */
+  line-height: 1.1;
+}
+
+.obs-card-sub{
+  margin-top: 10px;
+  opacity: .80;
+  font-size: 18px;
+  font-weight: 600;
+}
+/* Small observation cards (top row: Temp/Dew/RH/SLP/Vis) */
+.obs-card.small{
+  min-height: 90px;
+  padding: 18px 22px;
+}
+.obs-card.small .obs-card-title{
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+.obs-card.small .obs-card-value{
+  font-size: 34px;
+}
+
 
         </style>
         """,
         unsafe_allow_html=True,
     )
+
+def obs_card(title: str, value: str, subtitle: str | None = None) -> None:
+    html = f"""
+<div class="obs-card">
+  <div class="obs-card-title">{title}</div>
+  <div class="obs-card-value">{value}</div>
+  {f'<div class="obs-card-sub">{subtitle}</div>' if subtitle else ''}
+</div>
+"""
+    st.markdown(dedent(html), unsafe_allow_html=True)
+
+def obs_small_card(title: str, value: str) -> None:
+    html = f"""
+<div class="obs-card small">
+  <div class="obs-card-title">{title}</div>
+  <div class="obs-card-value">{value}</div>
+</div>
+"""
+    st.markdown(dedent(html), unsafe_allow_html=True)
+

@@ -4,6 +4,10 @@ import streamlit as st
 import requests
 from typing import Any, Dict, Optional, Tuple
 import time
+from datetime import datetime, timezone
+import math
+from utils.ui import obs_card, obs_small_card
+
 
 HEADERS = {
     "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
@@ -60,9 +64,28 @@ def _fmt_wind(dir_deg: Optional[float], spd_mph: Optional[float], gust_mph: Opti
         return f"{d} @ {s} (gust {int(round(gust_mph))})"
     return f"{d} @ {s}"
 
+def _parse_iso(ts: str | None) -> datetime | None:
+    if not ts:
+        return None
+    try:
+        # NWS timestamps often end with Z
+        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except Exception:
+        return None
+
+def _haversine_m(lat1, lon1, lat2, lon2) -> float:
+    R = 6371000.0
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlmb = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb/2)**2
+    return 2 * R * math.asin(math.sqrt(a))
+
 def _get_nws_latest_obs_near_point(lat: float, lon: float) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """
-    Returns (obs_properties, station_id). Uses api.weather.gov points -> observationStations -> first station -> observations/latest
+    Returns (obs_properties, station_id).
+    Picks the best nearby station (most complete fields), not just features[0].
     """
     try:
         points = _get_json(f"https://api.weather.gov/points/{lat:.4f},{lon:.4f}")
@@ -71,61 +94,110 @@ def _get_nws_latest_obs_near_point(lat: float, lon: float) -> Tuple[Optional[Dic
             return None, None
 
         stations = _get_json(stations_url)
-        features = stations.get("features", [])
+        features = stations.get("features", []) or []
         if not features:
             return None, None
 
-        first_station = features[0]
-        station_id = _safe(first_station, "properties", "stationIdentifier")
+        # Score stations by completeness + freshness; also prefer closer stations.
+        want_fields = [
+            ("temperature", "value"),
+            ("dewpoint", "value"),
+            ("relativeHumidity", "value"),
+            ("windDirection", "value"),
+            ("windSpeed", "value"),
+            ("windGust", "value"),
+            ("seaLevelPressure", "value"),
+            ("visibility", "value"),
+        ]
 
-        latest_url = _safe(first_station, "properties", "stationObservations")
-        if not latest_url:
-            # fallback if stationObservations missing for some reason
-            if station_id:
-                latest_url = f"https://api.weather.gov/stations/{station_id}/observations/latest"
+        best = None  # (score, dist_m, station_id, props)
+        for feat in features[:10]:
+            sid = _safe(feat, "properties", "stationIdentifier")
+            if not sid:
+                continue
 
-        latest = _get_json(latest_url)
-        props = latest.get("properties", {})
+            geom = feat.get("geometry") or {}
+            coords = geom.get("coordinates") or None
+            dist_m = None
+            if isinstance(coords, (list, tuple)) and len(coords) >= 2:
+                st_lon, st_lat = coords[0], coords[1]
+                dist_m = _haversine_m(lat, lon, st_lat, st_lon)
+
+            latest_url = f"https://api.weather.gov/stations/{sid}/observations/latest"
+            try:
+                latest = _get_json(latest_url)
+            except Exception:
+                continue
+
+            props = latest.get("properties") or {}
+            if not props:
+                continue
+
+            # completeness score: count non-null values
+            present = 0
+            for k1, k2 in want_fields:
+                v = _safe(props, k1, k2)
+                if v is not None:
+                    present += 1
+
+            # freshness bonus: prefer newer obs
+            ts = _parse_iso(props.get("timestamp"))
+            age_min = None
+            if ts is not None:
+                age = datetime.now(timezone.utc) - ts.astimezone(timezone.utc)
+                age_min = age.total_seconds() / 60.0
+
+            score = present
+            if age_min is not None:
+                # small bonus if < 90 minutes old, penalty if very old
+                if age_min <= 90:
+                    score += 1
+                elif age_min >= 240:
+                    score -= 2
+
+            # Prefer closer if scores tie
+            tie_dist = dist_m if dist_m is not None else 9e18
+
+            candidate = (score, tie_dist, sid, props)
+            if best is None or candidate[:2] < best[:2] is False:
+                # easier: explicit compare
+                if best is None:
+                    best = candidate
+                else:
+                    if score > best[0] or (score == best[0] and tie_dist < best[1]):
+                        best = candidate
+
+        if not best:
+            return None, None
+
+        _, _, station_id, props = best
         return props, station_id
+
     except Exception:
         return None, None
 
 def render(CITY_PRESETS, set_location):
     st.header("Observations")
 
-    
-    
-    # --------------------
-    # Location selector (same pattern as Home)
-    # --------------------
     preset_keys = list(CITY_PRESETS.keys())
-    options = preset_keys  # keep it simple here (no device location yet)
+    options = preset_keys  
 
-    # default selection
     default_city = st.session_state.city_key if st.session_state.city_key in preset_keys else preset_keys[0]
     default_index = options.index(default_city)
-
     left, right = st.columns([1, 3], gap="large")
     with left:
         selection = st.selectbox("Location", options, index=default_index, key="obs_location_select")
-
     if selection != st.session_state.city_key:
         lat, lon = CITY_PRESETS[selection]
         set_location(selection, lat, lon)
         st.rerun()
-
-    # current point
     lat = float(st.session_state.lat)
     lon = float(st.session_state.lon)
-
-    st.subheader("Radar")
-
     radar_id = _get_nearest_radar_id(lat, lon) or "KTLX"  # fallback for Oklahoma
 #    Cache-bust once per minute so the gif actually updates in browsers/CDNs
     bust = int(time.time() // 60)
-
+    st.subheader(f"Radar for {st.session_state.city_key} ({radar_id})")
     col1, col2 = st.columns(2, gap="large")
-
     with col1:
         st.markdown(f"**Base Reflectivity ({radar_id})**")
         st.image(
@@ -176,22 +248,52 @@ def render(CITY_PRESETS, set_location):
     slp_mb = None if slp_pa is None else slp_pa / 100.0
     vis_mi = None if vis_m is None else vis_m / 1609.344
 
+    def _deg_to_compass(deg: float | None) -> str | None:
+        if deg is None:
+            return None
+        dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"]
+        i = int((deg % 360) / 22.5 + 0.5) % 16
+        return dirs[i]
+
+    wd_card = _deg_to_compass(wind_dir)
+    wind_str = "—"
+    if wind_spd_mph is not None:
+        if wind_dir is not None and wd_card is not None:
+            wind_str = f"{wd_card} ({wind_dir:.0f}°) {wind_spd_mph:.0f} mph"
+        else:
+            wind_str = f"{wind_spd_mph:.0f} mph"
+
+    gust_str = f"Gust {wind_gust_mph:.0f} mph" if wind_gust_mph is not None else None
+    cond_str = desc or "—"
+
+
     st.markdown(f"### Latest near **{st.session_state.city_key}**")
     if station_id:
         st.caption(f"NWS station: {station_id} • {obs_time if obs_time else ''}")
+        st.caption("Note: Observations may be innacurate or incomplete")
 
 
-    # Metrics row
-    c1, c2, c3, c4, c5 = st.columns(5, gap="large")
-    c1.metric("Temp", _fmt_num(temp_f, "°F", 0))
-    c2.metric("Dewpoint", _fmt_num(dew_f, "°F", 0))
-    c3.metric("RH", _fmt_num(rh, "%", 0))
-    c4.metric("SLP", _fmt_num(slp_mb, " mb", 1))
-    c5.metric("Visibility", _fmt_num(vis_mi, " mi", 1))
+    row = st.columns(5, gap="large")
+    with row[0]:
+        obs_small_card("Temp", _fmt_num(temp_f, "°F", 0))
+    with row[1]:
+        obs_small_card("Dewpoint", _fmt_num(dew_f, "°F", 0))
+    with row[2]:
+        obs_small_card("RH", _fmt_num(rh, "%", 0))
+    with row[3]:
+        obs_small_card("SLP", _fmt_num(slp_mb, " mb", 1))
+    with row[4]:
+        obs_small_card("Visibility", _fmt_num(vis_mi, " mi", 1))
+    
+    st.divider()
 
-    st.write("**Wind:**", _fmt_wind(wind_dir, wind_spd_mph, wind_gust_mph))
-    if desc:
-        st.info(desc)
+    c1, c2 = st.columns(2, gap="large")
+
+    with c1:
+        obs_card("💨 Wind", wind_str, gust_str)
+
+    with c2:
+        obs_card("☁️ Conditions", cond_str)
 
     st.divider()
 
