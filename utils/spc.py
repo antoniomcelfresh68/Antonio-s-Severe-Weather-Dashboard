@@ -1,5 +1,10 @@
 import re
 import requests
+import streamlit as st
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_spc_location_percents_cached(lat: float, lon: float) -> dict:
+    return get_spc_location_percents(lat, lon)
 
 
 
