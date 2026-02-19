@@ -2,11 +2,24 @@
 import streamlit as st
 import requests
 from typing import Any, Dict, Optional, Tuple
+import time
+
 
 HEADERS = {
     "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
     "Accept": "application/geo+json, application/json",
 }
+
+def _get_nearest_radar_id(lat: float, lon: float) -> str | None:
+    """
+    Uses api.weather.gov points endpoint; returns radarStation like 'KTLX' when available.
+    """
+    try:
+        points = _get_json(f"https://api.weather.gov/points/{lat:.4f},{lon:.4f}")
+        return _safe(points, "properties", "radarStation")
+    except Exception:
+        return None
+
 
 @st.cache_data(ttl=120, show_spinner=False)
 def _get_json(url: str, timeout: int = 20) -> Dict[str, Any]:
@@ -81,6 +94,8 @@ def _get_nws_latest_obs_near_point(lat: float, lon: float) -> Tuple[Optional[Dic
 def render(CITY_PRESETS, set_location):
     st.header("Observations")
 
+    
+    
     # --------------------
     # Location selector (same pattern as Home)
     # --------------------
@@ -104,6 +119,31 @@ def render(CITY_PRESETS, set_location):
     lat = float(st.session_state.lat)
     lon = float(st.session_state.lon)
 
+    st.subheader("Radar")
+
+    radar_id = _get_nearest_radar_id(lat, lon) or "KTLX"  # fallback for Oklahoma
+#    Cache-bust once per minute so the gif actually updates in browsers/CDNs
+    bust = int(time.time() // 60)
+
+    col1, col2 = st.columns(2, gap="large")
+
+    with col1:
+        st.markdown(f"**Base Reflectivity ({radar_id})**")
+        st.image(
+        f"https://radar.weather.gov/ridge/standard/{radar_id}_loop.gif?b={bust}",
+        use_container_width=True,
+    )
+
+    with col2:
+        st.markdown(f"**Base Velocity ({radar_id})**")
+        st.image(
+        f"https://radar.weather.gov/ridge/standard/base_velocity/{radar_id}_loop.gif?b={bust}",
+        use_container_width=True,
+    )
+
+    st.caption("Radar imagery: NOAA/NWS RIDGE (loop GIFs).")
+
+
     # --------------------
     # Pull latest NWS observation
     # --------------------
@@ -126,7 +166,8 @@ def render(CITY_PRESETS, set_location):
     rh     = _safe(obs, "relativeHumidity", "value")  # %
 
     desc = obs.get("textDescription")
-    time = obs.get("timestamp")
+    obs_time = obs.get("timestamp")
+
 
     temp_f = _c_to_f(temp_c)
     dew_f = _c_to_f(dew_c)
@@ -138,7 +179,8 @@ def render(CITY_PRESETS, set_location):
 
     st.markdown(f"### Latest near **{st.session_state.city_key}**")
     if station_id:
-        st.caption(f"NWS station: {station_id} • {time if time else ''}")
+        st.caption(f"NWS station: {station_id} • {obs_time if obs_time else ''}")
+
 
     # Metrics row
     c1, c2, c3, c4, c5 = st.columns(5, gap="large")

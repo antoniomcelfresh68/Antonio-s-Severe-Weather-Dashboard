@@ -1,6 +1,17 @@
-# pages/home.py
+# util/home.py
+from datetime import datetime
+
 import streamlit as st
-from utils.spc import get_spc_location_percents
+from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
+from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_ytd
+
+@st.cache_data(ttl=900)
+def tor_count_cached(y):
+    return fetch_tor_warning_count_ytd(year=y)
+
+@st.cache_data(ttl=900)
+def svr_count_cached(y):
+    return fetch_svr_warning_count_ytd(year=y)
 
 def render(
     spc_img,
@@ -8,6 +19,15 @@ def render(
     set_location,
     get_spc_location_percents,
 ):
+    year = datetime.utcnow().year
+    tor_count = tor_count_cached(year)
+    svr_count = svr_count_cached(year)
+    st.markdown("---")
+    c1, c2 = st.columns(2, gap="large")
+    c1.metric(f"Tornado Warnings (YTD {year})", tor_count)
+    c2.metric(f"Severe TSTM Warnings (YTD {year})", svr_count)
+    st.markdown("---")
+
     st.subheader("SPC Outlooks (Day 1–7)")
     st.divider()
 

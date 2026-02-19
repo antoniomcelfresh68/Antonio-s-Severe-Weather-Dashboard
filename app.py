@@ -54,44 +54,12 @@ st.markdown(
 st.markdown(
     """
     <div style='text-align: center; color: #666666; font-size: 0.8rem; margin-top: 0.3rem;'>
-        v2.2.0 
+        v2.2.1 
     </div>
     """,
     unsafe_allow_html=True
 )
 
-# =========================
-# NATIONAL STATS BAR
-# =========================
-
-st.markdown("---")
-
-col1, col2 = st.columns([2, 2], gap="large")
-
-year = datetime.utcnow().year
-
-@st.cache_data(ttl=900)
-def tor_count_cached(y):
-    return fetch_tor_warning_count_ytd(year=y)
-
-@st.cache_data(ttl=900)
-def svr_count_cached(y):
-    return fetch_svr_warning_count_ytd(year=y)
-
-tor_count = tor_count_cached(year)
-svr_count = svr_count_cached(year)
-
-with col1:
-    st.metric(
-        label=f"Tornado Warnings (YTD {year})",
-        value=tor_count
-    )
-
-with col2:
-    st.metric(
-        label=f"Severe TSTM Warnings (YTD {year})",
-        value=svr_count
-    )
 
 
 
