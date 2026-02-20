@@ -1,5 +1,7 @@
 # utils/ui.py
 
+from turtle import width
+
 import streamlit as st
 from textwrap import dedent
 import base64
@@ -160,6 +162,21 @@ div[data-testid="stMetricValue"] {
 .obs-card.small .obs-card-value{
   font-size: 34px;
 }
+/* Fade bottom of hero image */
+.hero-wrap img {
+    -webkit-mask-image: linear-gradient(
+        to bottom,
+        rgba(0,0,0,1) 0%,
+        rgba(0,0,0,1) 75%,
+        rgba(0,0,0,0) 100%
+    );
+    mask-image: linear-gradient(
+        to bottom,
+        rgba(0,0,0,1) 0%,
+        rgba(0,0,0,1) 75%,
+        rgba(0,0,0,0) 100%
+    );
+}
 
 
         </style>
@@ -186,8 +203,10 @@ def obs_small_card(title: str, value: str) -> None:
 """
     st.markdown(dedent(html), unsafe_allow_html=True)
 
-
 def render_global_hero(image_path: str, title: str, location: str, version: str) -> None:
+    import base64
+    import streamlit as st
+
     with open(image_path, "rb") as f:
         encoded = base64.b64encode(f.read()).decode("utf-8")
 
@@ -202,12 +221,15 @@ def render_global_hero(image_path: str, title: str, location: str, version: str)
             overflow: hidden;
             box-shadow: 0 0 60px rgba(0,0,0,0.35);
         }}
+
+        /* NOTE: fade/mask lives in apply_global_ui() now */
         .hero-wrap img {{
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             display: block;
         }}
+
         .hero-overlay {{
             position: absolute;
             inset: 0;
@@ -215,6 +237,7 @@ def render_global_hero(image_path: str, title: str, location: str, version: str)
               radial-gradient(ellipse at center, rgba(0,0,0,0.10), rgba(0,0,0,0.60)),
               linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.45) 60%, rgba(132,22,23,0.30) 100%);
         }}
+
         .hero-text {{
             position: absolute;
             inset: 0;
@@ -226,6 +249,7 @@ def render_global_hero(image_path: str, title: str, location: str, version: str)
             z-index: 5;
             color: rgba(255,255,255,0.95);
         }}
+
         .hero-text h1 {{
             margin: 0;
             font-size: 3.0rem;
@@ -233,16 +257,28 @@ def render_global_hero(image_path: str, title: str, location: str, version: str)
             letter-spacing: 0.5px;
             text-shadow: 0 8px 30px rgba(0,0,0,0.55);
         }}
+
         .hero-text .loc {{
             margin-top: 0.7rem;
             font-size: 1.0rem;
             opacity: 0.92;
         }}
+
         .hero-text .links {{
             margin-top: 0.35rem;
             font-size: 0.88rem;
             opacity: 0.85;
         }}
+
+        .hero-text .links a {{
+            color: rgba(255,255,255,0.92);
+            text-decoration: underline;
+        }}
+
+        .hero-text .links a:hover {{
+            color: rgba(255,255,255,1.0);
+        }}
+
         .hero-text .ver {{
             margin-top: 0.25rem;
             font-size: 0.82rem;

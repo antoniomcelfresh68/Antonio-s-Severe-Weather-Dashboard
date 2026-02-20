@@ -20,18 +20,8 @@ def render(
     get_spc_location_percents,
 ):
     
-
-    year = datetime.utcnow().year
-    tor_count = tor_count_cached(year)
-    svr_count = svr_count_cached(year)
-    st.markdown("---")
-    c1, c2 = st.columns(2, gap="large")
-    c1.metric(f"Tornado Warnings (YTD {year})", tor_count)
-    c2.metric(f"Severe TSTM Warnings (YTD {year})", svr_count)
-    st.markdown("---")
-
-    st.subheader("SPC Outlooks (Day 1–7)")
-    st.divider()
+    st.markdown(" # SPC Convective Outlooks")
+    
 
     # --- Images like v1.5 ---
     # Layout: Day 1-3 top row, Day 4-7 bottom row
@@ -106,7 +96,7 @@ def render(
     def fmt(x):
         return "0%" if x is None else f"{int(x)}%"
 
-    st.markdown(f"### SPC % at {st.session_state.city_key}")
+    st.markdown(f"# SPC % for {st.session_state.city_key}")
 
     # Day 1
     m1 = st.columns(3)

@@ -20,6 +20,7 @@ import utils.home as home
 from utils.observations import render as render_observations
 import utils.about as about
 from utils.ui import apply_global_ui, render_global_hero
+from utils.statistics import render as render_statistics
 
 st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="expanded")
 
@@ -29,12 +30,12 @@ render_global_hero(
     image_path="assets/banner.jpg",
     title=APP_TITLE,
     location=st.session_state.city_key,
-    version="v2.3.1",
+    version="v2.3.2",
 )
 
 nav = st.radio(
     "",
-    ["Home", "Observations", "Model Forecasts", "About", "Statistics (coming soon)"],
+    ["Home", "Observations", "Model Forecasts", "Statistics", "About"],
     horizontal=True,
     key="nav",
 )
@@ -58,6 +59,9 @@ elif nav == "Observations":
 elif nav == "Model Forecasts":
     st.subheader("Model Forecasts")
     st.info("Coming soon: model data (HRRR, GFS) for your location.")
+
+elif nav == "Statistics":
+    render_statistics()
 
 elif nav == "About":
     about.render(

@@ -194,8 +194,10 @@ def spc_meso_fixed():
         height=900,
     )
 
+
+
 def render(CITY_PRESETS, set_location):
-    st.header("Observations")
+    st.markdown(f" # Observations")
     spc_meso_fixed()
 
     preset_keys = list(CITY_PRESETS.keys())
@@ -215,7 +217,7 @@ def render(CITY_PRESETS, set_location):
     radar_id = _get_nearest_radar_id(lat, lon) or "KTLX"  # fallback for Oklahoma
 #    Cache-bust once per minute so the gif actually updates in browsers/CDNs
     bust = int(time.time() // 60)
-    st.subheader(f"Radar for {st.session_state.city_key} ({radar_id})")
+    st.markdown(f" # Radar for {st.session_state.city_key} ({radar_id})")
     col1, col2 = st.columns(2, gap="large")
     with col1:
         st.markdown(f"**Base Reflectivity ({radar_id})**")
@@ -285,9 +287,9 @@ def render(CITY_PRESETS, set_location):
     gust_str = f"Gust {wind_gust_mph:.0f} mph" if wind_gust_mph is not None else None
     cond_str = desc or "—"
 
-    st.markdown(f"### Latest near **{st.session_state.city_key}**")
+    st.markdown(f"# Latest near **{st.session_state.city_key}**")
     if station_id:
-        st.caption(f"NWS station: {station_id} • {obs_time if obs_time else ''}")
+        st.markdown(f"NWS station: {station_id} • {obs_time if obs_time else ''}")
         st.caption("Note: Observations may be innacurate or incomplete")
 
     row = st.columns(5, gap="large")
@@ -308,7 +310,7 @@ def render(CITY_PRESETS, set_location):
 
     with c1:
         obs_card("💨 Wind", wind_str, gust_str)
-
+    st.write("** Wind values are mostly innacurate for the time being **")
     with c2:
         obs_card("☁️ Conditions", cond_str)
 
