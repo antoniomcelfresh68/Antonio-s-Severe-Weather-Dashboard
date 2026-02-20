@@ -30,9 +30,27 @@ def apply_global_ui() -> None:
         }
 
         .block-container {
+            max-width: 1300px;          /* controls fixed page width */
+            margin: 0 auto;             /* centers the app */
             padding-top: 1.5rem;
             padding-bottom: 2rem;
+            padding-left: 2rem;
+            padding-right: 2rem;
         }
+            img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    overflow: hidden !important;
+}
+.block-container {
+    overflow-x: hidden;
+}
 
         footer {visibility: hidden;}
         #MainMenu {visibility: hidden;}

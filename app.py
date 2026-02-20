@@ -52,7 +52,7 @@ st.markdown(
 st.markdown(
     """
     <div style='text-align: center; color: #666666; font-size: 0.8rem; margin-top: 0.3rem;'>
-        v2.2.2
+        v2.3.0
     </div>
     """,
     unsafe_allow_html=True

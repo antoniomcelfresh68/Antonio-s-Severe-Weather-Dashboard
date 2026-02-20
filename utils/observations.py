@@ -7,7 +7,8 @@ import time
 from datetime import datetime, timezone
 import math
 from utils.ui import obs_card, obs_small_card
-
+import streamlit as st
+import streamlit.components.v1 as components
 
 HEADERS = {
     "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
@@ -176,7 +177,22 @@ def _get_nws_latest_obs_near_point(lat: float, lon: float) -> Tuple[Optional[Dic
     except Exception:
         return None, None
 
+
+def spc_meso_fixed():
+    url = "https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=21&parm=mlcape"
+
+    components.iframe(url, height=900, scrolling=True)
+
 def render(CITY_PRESETS, set_location):
+    st.markdown(
+    """
+    <script>
+    window.scrollTo(0, 0);
+    </script>
+    """,
+    unsafe_allow_html=True,
+)
+    
     st.header("Observations")
 
     preset_keys = list(CITY_PRESETS.keys())
@@ -266,12 +282,10 @@ def render(CITY_PRESETS, set_location):
     gust_str = f"Gust {wind_gust_mph:.0f} mph" if wind_gust_mph is not None else None
     cond_str = desc or "—"
 
-
     st.markdown(f"### Latest near **{st.session_state.city_key}**")
     if station_id:
         st.caption(f"NWS station: {station_id} • {obs_time if obs_time else ''}")
         st.caption("Note: Observations may be innacurate or incomplete")
-
 
     row = st.columns(5, gap="large")
     with row[0]:
@@ -296,6 +310,28 @@ def render(CITY_PRESETS, set_location):
         obs_card("☁️ Conditions", cond_str)
 
     st.divider()
+
+    st.subheader("SPC Mesoanalysis")
+
+    spc_meso_fixed()
+
+    components.html(
+        """
+        <script>
+        const scrollTop = () => {
+            const doc = window.parent.document;
+            doc.documentElement.scrollTop = 0;
+            doc.body.scrollTop = 0;
+        };
+        setTimeout(scrollTop, 100);
+        setTimeout(scrollTop, 300);
+        setTimeout(scrollTop, 600);
+        </script>
+        """,
+        height=0,
+        )
+
+    
 
     
     
