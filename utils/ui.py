@@ -2,6 +2,7 @@
 
 import streamlit as st
 from textwrap import dedent
+import base64
 
 def apply_global_ui() -> None:
     st.markdown(
@@ -30,7 +31,7 @@ def apply_global_ui() -> None:
         }
 
         .block-container {
-            max-width: 1300px;          /* controls fixed page width */
+            max-width: 1350px;          /* controls fixed page width */
             margin: 0 auto;             /* centers the app */
             padding-top: 1.5rem;
             padding-bottom: 2rem;
@@ -185,3 +186,86 @@ def obs_small_card(title: str, value: str) -> None:
 """
     st.markdown(dedent(html), unsafe_allow_html=True)
 
+
+def render_global_hero(image_path: str, title: str, location: str, version: str) -> None:
+    with open(image_path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode("utf-8")
+
+    st.markdown(
+        f"""
+        <style>
+        .hero-wrap {{
+            position: relative;
+            width: 100%;
+            height: 320px;
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 0 60px rgba(0,0,0,0.35);
+        }}
+        .hero-wrap img {{
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }}
+        .hero-overlay {{
+            position: absolute;
+            inset: 0;
+            background:
+              radial-gradient(ellipse at center, rgba(0,0,0,0.10), rgba(0,0,0,0.60)),
+              linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.45) 60%, rgba(132,22,23,0.30) 100%);
+        }}
+        .hero-text {{
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 1.5rem;
+            z-index: 5;
+            color: rgba(255,255,255,0.95);
+        }}
+        .hero-text h1 {{
+            margin: 0;
+            font-size: 3.0rem;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-shadow: 0 8px 30px rgba(0,0,0,0.55);
+        }}
+        .hero-text .loc {{
+            margin-top: 0.7rem;
+            font-size: 1.0rem;
+            opacity: 0.92;
+        }}
+        .hero-text .links {{
+            margin-top: 0.35rem;
+            font-size: 0.88rem;
+            opacity: 0.85;
+        }}
+        .hero-text .ver {{
+            margin-top: 0.25rem;
+            font-size: 0.82rem;
+            opacity: 0.70;
+        }}
+        </style>
+
+        <div class="hero-wrap">
+          <img src="data:image/jpeg;base64,{encoded}" />
+          <div class="hero-overlay"></div>
+          <div class="hero-text">
+            <div>
+              <h1>{title}</h1>
+              <div class="loc">Current Location: {location}</div>
+              <div class="links">
+                Developed by Antonio McElfresh |
+                GitHub: <a href="https://github.com/antoniomcelfresh68/Antonio-s-Severe-Weather-Dashboard" target="_blank">View on GitHub</a> |
+                LinkedIn: <a href="https://www.linkedin.com/in/antonio-mcelfresh-632462309/" target="_blank">View Profile</a>
+              </div>
+              <div class="ver">{version}</div>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )

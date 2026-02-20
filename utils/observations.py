@@ -177,23 +177,26 @@ def _get_nws_latest_obs_near_point(lat: float, lon: float) -> Tuple[Optional[Dic
     except Exception:
         return None, None
 
-
 def spc_meso_fixed():
-    url = "https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=21&parm=mlcape"
+    url = "https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=19&parm=pmsl"
 
-    components.iframe(url, height=900, scrolling=True)
+    components.html(
+        f"""
+        <iframe
+            src="{url}"
+            width="100%"
+            height="1000"
+            style="border:0;"
+            tabindex="-1"
+            loading="eager"
+        ></iframe>
+        """,
+        height=900,
+    )
 
 def render(CITY_PRESETS, set_location):
-    st.markdown(
-    """
-    <script>
-    window.scrollTo(0, 0);
-    </script>
-    """,
-    unsafe_allow_html=True,
-)
-    
     st.header("Observations")
+    spc_meso_fixed()
 
     preset_keys = list(CITY_PRESETS.keys())
     options = preset_keys  
@@ -309,29 +312,10 @@ def render(CITY_PRESETS, set_location):
     with c2:
         obs_card("☁️ Conditions", cond_str)
 
-    st.divider()
-
-    st.subheader("SPC Mesoanalysis")
-
-    spc_meso_fixed()
-
-    components.html(
-        """
-        <script>
-        const scrollTop = () => {
-            const doc = window.parent.document;
-            doc.documentElement.scrollTop = 0;
-            doc.body.scrollTop = 0;
-        };
-        setTimeout(scrollTop, 100);
-        setTimeout(scrollTop, 300);
-        setTimeout(scrollTop, 600);
-        </script>
-        """,
-        height=0,
-        )
+   
 
     
 
     
+
     

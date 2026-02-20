@@ -19,51 +19,27 @@ from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_yt
 import utils.home as home
 from utils.observations import render as render_observations
 import utils.about as about
-
-apply_global_ui()  
-init_state()
+from utils.ui import apply_global_ui, render_global_hero
 
 st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="expanded")
 
-st.markdown(
-    f"""
-    <h1 style='text-align: center; margin-bottom: 0.2em;'>
-        {APP_TITLE}
-    </h1>
-    """,
-    unsafe_allow_html=True
-)
-st.markdown(
-    f"""
-    <div style='text-align: center; color: #BBBBBB; font-size: 0.95rem;'>
-        Current Location: {st.session_state.city_key}
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-st.markdown(
-    """
-    <div style='text-align: center; color: #888888; font-size: 0.85rem;'>
-        Developed by Antonio McElfresh | GitHub: <a href="https://github.com/antoniomcelfresh68/Antonio-s-Severe-Weather-Dashboard" target="_blank">View on GitHub</a> | LinkedIn: <a href="https://www.linkedin.com/in/antonio-mcelfresh-632462309/" target="_blank">View Profile</a>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-st.markdown(
-    """
-    <div style='text-align: center; color: #666666; font-size: 0.8rem; margin-top: 0.3rem;'>
-        v2.3.0
-    </div>
-    """,
-    unsafe_allow_html=True
+init_state()
+apply_global_ui()
+
+render_global_hero(
+    image_path="assets/banner.jpg",
+    title=APP_TITLE,
+    location=st.session_state.city_key,
+    version="v2.3.1",
 )
 
 nav = st.radio(
     "",
-    ["Home", "Observations", "Model Forecasts", "About"],
+    ["Home", "Observations", "Model Forecasts", "About", "Statistics (coming soon)"],
     horizontal=True,
     key="nav",
 )
+
 
 if nav == "Home":
     def spc_img(url: str) -> str:

@@ -35,7 +35,7 @@ def render(
 
     # --- Images like v1.5 ---
     # Layout: Day 1-3 top row, Day 4-7 bottom row
-    row1 = st.columns(3, gap="large")
+    row1 = st.columns(3, gap="small")
     with row1[0]:
         st.markdown("**Day 1 Categorical**")
         st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day1otlk.gif"), use_container_width=True)
@@ -48,7 +48,7 @@ def render(
 
     st.divider()
 
-    row2 = st.columns(4, gap="large")
+    row2 = st.columns(4, gap="small")
     with row2[0]:
         st.markdown("**Day 4 Probability**")
         st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day4prob.gif"), use_container_width=True)
