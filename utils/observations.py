@@ -194,8 +194,6 @@ def spc_meso_fixed():
         height=900,
     )
 
-
-
 def render(CITY_PRESETS, set_location):
     st.markdown(f" # Observations")
     spc_meso_fixed()

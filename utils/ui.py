@@ -1,6 +1,6 @@
 # utils/ui.py
 
-from turtle import width
+
 
 import streamlit as st
 from textwrap import dedent
