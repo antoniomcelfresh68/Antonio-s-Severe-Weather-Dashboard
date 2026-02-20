@@ -25,7 +25,6 @@ st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="e
 
 init_state()
 apply_global_ui()
-
 render_global_hero(
     image_path="assets/banner.jpg",
     title=APP_TITLE,
@@ -39,7 +38,6 @@ nav = st.radio(
     horizontal=True,
     key="nav",
 )
-
 
 if nav == "Home":
     def spc_img(url: str) -> str:
