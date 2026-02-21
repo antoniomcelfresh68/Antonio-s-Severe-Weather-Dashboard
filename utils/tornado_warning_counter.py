@@ -5,6 +5,7 @@ import io
 import pandas as pd
 import requests
 from datetime import datetime, timezone
+from typing import Optional
 
 IEM_WATCHWARN = "https://mesonet.agron.iastate.edu/cgi-bin/request/gis/watchwarn.py"
 
@@ -13,7 +14,7 @@ HEADERS = {
     "Accept": "text/csv",
 }
 
-def fetch_tor_warning_count_ytd(year: int | None = None, timeout: int = 45) -> int:
+def fetch_tor_warning_count_ytd(year: Optional[int] = None, timeout: int = 45) -> int:
     """
     Returns national YTD count of Tornado Warning *events* (unique by WFO+ETN+year+phenomena+significance),
     using IEM's VTEC archive CSV bulk service.

@@ -9,13 +9,14 @@ import math
 from utils.ui import obs_card, obs_small_card
 import streamlit as st
 import streamlit.components.v1 as components
+from utils.satelite import render_satellite_panel
 
 HEADERS = {
     "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
     "Accept": "application/geo+json, application/json",
 }
 
-def _get_nearest_radar_id(lat: float, lon: float) -> str | None:
+def _get_nearest_radar_id(lat: float, lon: float) -> Optional[str]:
     """
     Uses api.weather.gov points endpoint; returns radarStation like 'KTLX' when available.
     """
@@ -65,7 +66,7 @@ def _fmt_wind(dir_deg: Optional[float], spd_mph: Optional[float], gust_mph: Opti
         return f"{d} @ {s} (gust {int(round(gust_mph))})"
     return f"{d} @ {s}"
 
-def _parse_iso(ts: str | None) -> datetime | None:
+def _parse_iso(ts: Optional[str]) -> Optional[datetime]:
     if not ts:
         return None
     try:
@@ -267,7 +268,7 @@ def render(CITY_PRESETS, set_location):
     slp_mb = None if slp_pa is None else slp_pa / 100.0
     vis_mi = None if vis_m is None else vis_m / 1609.344
 
-    def _deg_to_compass(deg: float | None) -> str | None:
+    def _deg_to_compass(deg: Optional[float]) -> Optional[str]:
         if deg is None:
             return None
         dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"]
@@ -311,6 +312,9 @@ def render(CITY_PRESETS, set_location):
     st.write("** Wind values are mostly innacurate for the time being **")
     with c2:
         obs_card("☁️ Conditions", cond_str)
+    
+    st.divider()
+    render_satellite_panel()
 
    
 

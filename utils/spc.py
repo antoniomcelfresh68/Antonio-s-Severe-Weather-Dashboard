@@ -3,6 +3,7 @@
 import re
 import requests
 import streamlit as st
+from typing import List, Optional
 
 @st.cache_data(ttl=300, show_spinner=False)
 def get_spc_location_percents_cached(lat: float, lon: float) -> dict:
@@ -14,13 +15,12 @@ HEADERS = {
     "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
     "Accept": "application/json",
 }
-
-def _get_json(url: str, params: dict | None = None, timeout: int = 25) -> dict:
+def _get_json(url: str, params: Optional[dict] = None, timeout: int = 25) -> dict:
     r = requests.get(url, params=params, headers=HEADERS, timeout=timeout)
     r.raise_for_status()
     return r.json()
 
-_service_info_cache: dict | None = None
+_service_info_cache: Optional[dict] = None
 
 def spc_service_info() -> dict:
     global _service_info_cache
@@ -28,7 +28,7 @@ def spc_service_info() -> dict:
         _service_info_cache = _get_json(SPC_BASE, params={"f": "pjson"})
     return _service_info_cache
 
-def find_layer_id(day_label: str, contains: str) -> int | None:
+def find_layer_id(day_label: str, contains: str) -> Optional[int]:
     """
     Find a layer ID by matching substrings in the layer name.
     Example: day_label="Day 1", contains="Categorical"
@@ -112,7 +112,7 @@ def _extract_label(props: dict) -> str:
             return str(v).strip()
     return ""
 
-def _extract_percent(props: dict) -> int | None:
+def _extract_percent(props: dict) -> Optional[int]:
     # Most services include LABEL like "5%" or "15%"
     lab = _extract_label(props)
     m = re.search(r"(\d{1,2})\s*%?", lab)
@@ -153,7 +153,7 @@ def point_day1_3_category(lat: float, lon: float, day: str) -> str:
 
     return best if best else "NONE"
 
-def point_day_prob(lat: float, lon: float, day: str) -> int | None:
+def point_day_prob(lat: float, lon: float, day: str) -> Optional[int]:
     layer_id = find_layer_id(day, "Probabilistic") or find_layer_id(day, "Probability")
     if layer_id is None:
         return None
@@ -199,7 +199,7 @@ def get_spc_point_summary(lat: float, lon: float) -> dict:
     }
     return out
 
-def _find_layer_id_any(day_label: str, keywords: list[str]) -> int | None:
+def _find_layer_id_any(day_label: str, keywords: List[str]) -> Optional[int]:
     """
     More flexible layer finder: all keywords must appear in layer name.
     """
@@ -224,7 +224,7 @@ DAY_HAZARD_LAYER_IDS = {
     },
 }
 
-def point_hazard_percent(lat: float, lon: float, day: str, hazard: str) -> int | None:
+def point_hazard_percent(lat: float, lon: float, day: str, hazard: str) -> Optional[int]:
     hz = hazard.lower()
 
     layer_id = DAY_HAZARD_LAYER_IDS.get(day, {}).get(hz)

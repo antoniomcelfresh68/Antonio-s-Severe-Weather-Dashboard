@@ -1,7 +1,6 @@
 # utils/ui.py
 
-
-
+from typing import Optional
 import streamlit as st
 from textwrap import dedent
 import base64
@@ -184,7 +183,7 @@ div[data-testid="stMetricValue"] {
         unsafe_allow_html=True,
     )
 
-def obs_card(title: str, value: str, subtitle: str | None = None) -> None:
+def obs_card(title: str, value: str, subtitle: Optional[str] = None) -> None:
     html = f"""
 <div class="obs-card">
   <div class="obs-card-title">{title}</div>

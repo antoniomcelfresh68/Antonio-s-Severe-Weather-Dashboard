@@ -30,7 +30,7 @@ render_global_hero(
     image_path="assets/banner.jpg",
     title=APP_TITLE,
     location=st.session_state.city_key,
-    version="v2.3.2",
+    version="v2.3.3",
 )
 
 nav = st.radio(
