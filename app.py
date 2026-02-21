@@ -3,19 +3,9 @@
 import streamlit as st
 from utils.config import APP_TITLE
 from utils.state import init_state
-from utils.sidebar import location_sidebar
-from utils.ui import apply_global_ui
-import requests
-from datetime import datetime
-from zoneinfo import ZoneInfo
-from utils.spc import get_spc_point_summary
 from utils.spc import get_spc_location_percents_cached as get_spc_location_percents
 from utils.config import CITY_PRESETS
 from utils.state import set_location
-from datetime import datetime
-import streamlit as st
-from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
-from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_ytd
 import utils.home as home
 from utils.observations import render as render_observations
 import utils.about as about

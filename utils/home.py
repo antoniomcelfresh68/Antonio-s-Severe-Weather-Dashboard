@@ -1,6 +1,5 @@
 # util/home.py
 
-from datetime import datetime
 import streamlit as st
 from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
 from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_ytd
@@ -64,8 +63,6 @@ def render(
     default_option = st.session_state.city_key if st.session_state.city_key in preset_keys else preset_keys[0]
     default_index = options.index(default_option)
 
-    left, _ = st.columns([1, 3], gap="large")
-    
     def _on_home_location_change():
         sel = st.session_state.home_location_select
         if sel == "My Location":
