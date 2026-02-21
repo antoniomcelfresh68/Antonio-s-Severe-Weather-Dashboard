@@ -203,8 +203,6 @@ def obs_small_card(title: str, value: str) -> None:
     st.markdown(dedent(html), unsafe_allow_html=True)
 
 def render_global_hero(image_path: str, title: str, location: str, version: str) -> None:
-    import base64
-    import streamlit as st
 
     with open(image_path, "rb") as f:
         encoded = base64.b64encode(f.read()).decode("utf-8")

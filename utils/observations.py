@@ -7,7 +7,6 @@ import time
 from datetime import datetime, timezone
 import math
 from utils.ui import obs_card, obs_small_card
-import streamlit as st
 import streamlit.components.v1 as components
 from utils.satelite import render_satellite_panel
 
@@ -57,14 +56,6 @@ def _fmt_num(x: Optional[float], suffix: str = "", digits: int = 0) -> str:
         return f"{int(round(x))}{suffix}"
     return f"{x:.{digits}f}{suffix}"
 
-def _fmt_wind(dir_deg: Optional[float], spd_mph: Optional[float], gust_mph: Optional[float]) -> str:
-    if spd_mph is None and gust_mph is None:
-        return "—"
-    d = "—" if dir_deg is None else f"{int(round(dir_deg))}°"
-    s = "—" if spd_mph is None else f"{int(round(spd_mph))} mph"
-    if gust_mph is not None and gust_mph > 0:
-        return f"{d} @ {s} (gust {int(round(gust_mph))})"
-    return f"{d} @ {s}"
 
 def _parse_iso(ts: Optional[str]) -> Optional[datetime]:
     if not ts:
@@ -161,13 +152,8 @@ def _get_nws_latest_obs_near_point(lat: float, lon: float) -> Tuple[Optional[Dic
             tie_dist = dist_m if dist_m is not None else 9e18
 
             candidate = (score, tie_dist, sid, props)
-            if best is None or candidate[:2] < best[:2] is False:
-                # easier: explicit compare
-                if best is None:
-                    best = candidate
-                else:
-                    if score > best[0] or (score == best[0] and tie_dist < best[1]):
-                        best = candidate
+            if best is None or score > best[0] or (score == best[0] and tie_dist < best[1]):
+                best = candidate
 
         if not best:
             return None, None

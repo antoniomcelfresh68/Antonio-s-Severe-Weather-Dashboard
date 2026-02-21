@@ -1,9 +1,6 @@
 from datetime import datetime
 import streamlit as st
 from utils.home import svr_count_cached, tor_count_cached
-from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
-from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_ytd
-
 
 def render():
     year = datetime.utcnow().year
