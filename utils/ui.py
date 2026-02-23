@@ -4,6 +4,7 @@ from typing import Optional
 import streamlit as st
 from textwrap import dedent
 import base64
+import os
 
 def apply_global_ui() -> None:
     st.markdown(
@@ -199,10 +200,25 @@ def obs_small_card(title: str, value: str) -> None:
 """
     st.markdown(dedent(html), unsafe_allow_html=True)
 
-def render_global_hero(image_path: str, title: str, location: str, version: str) -> None:
+def render_global_hero(
+    image_path: str,
+    title: str,
+    location: str,
+    version: str,
+    logo_path: Optional[str] = None,
+) -> None:
 
     with open(image_path, "rb") as f:
         encoded = base64.b64encode(f.read()).decode("utf-8")
+
+    logo_html = ""
+    if logo_path and os.path.exists(logo_path):
+        with open(logo_path, "rb") as f:
+            logo_encoded = base64.b64encode(f.read()).decode("utf-8")
+        logo_html = (
+            f'<img class="hero-logo" src="data:image/png;base64,{logo_encoded}" '
+            f'alt="{title} logo" />'
+        )
 
     st.markdown(
         f"""
@@ -268,12 +284,13 @@ def render_global_hero(image_path: str, title: str, location: str, version: str)
             color: rgba(255,255,255,0.95);
         }}
 
-        .hero-text h1 {{
-            margin: 0;
-            font-size: 3.0rem;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            text-shadow: 0 8px 30px rgba(0,0,0,0.55);
+        .hero-logo {{
+            display: block;
+            margin: 0 auto 0.85rem auto;
+            width: min(380px, 41vw) !important;
+            max-width: none !important;
+            height: auto;
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.45));
         }}
 
         .hero-text .loc {{
@@ -307,7 +324,7 @@ def render_global_hero(image_path: str, title: str, location: str, version: str)
         <div class="hero-wrap">
           <div class="hero-text">
             <div>
-              <h1>{title}</h1>
+              {logo_html}
               <div class="loc">Current Location: {location}</div>
               <div class="links">
                 Developed by Antonio McElfresh |

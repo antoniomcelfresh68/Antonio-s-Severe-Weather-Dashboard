@@ -14,8 +14,6 @@ def svr_count_cached(y):
 
 def render(
     spc_img,
-    CITY_PRESETS,
-    set_location,
     get_spc_location_percents,
 ):
     
@@ -52,37 +50,6 @@ def render(
         st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day7prob.gif"), width='stretch')
 
     st.caption("Images are official SPC products. Day 4–8 is the experimental/probabilistic suite (we’re showing Day 4–7).")
-
-    # --------------------
-    # Top-left location selector
-    # --------------------
-    preset_keys = list(CITY_PRESETS.keys())
-    options = ["My Location"] + preset_keys
-
-    # Default selection = current preset city (if it exists)
-    default_option = st.session_state.city_key if st.session_state.city_key in preset_keys else preset_keys[0]
-    default_index = options.index(default_option)
-    
-    def _on_home_location_change():
-        sel = st.session_state.home_location_select
-        if sel == "My Location":
-            return
-        lat, lon = CITY_PRESETS[sel]
-        set_location(sel, lat, lon)
-
-    left, _ = st.columns([1, 3], gap="large")
-    with left:
-        st.selectbox(
-            "Location",
-            options,
-            index=default_index,
-            key="home_location_select",
-            on_change=_on_home_location_change,
-    )
-
-    if st.session_state.home_location_select == "My Location":
-        st.info("Device location will be added soon. For now, pick a preset location.")
-
 
     # --- SPC % at your location ---
     nums = get_spc_location_percents(

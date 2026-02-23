@@ -181,22 +181,9 @@ def spc_meso_fixed():
         height=900,
     )
 
-def render(CITY_PRESETS, set_location):
+def render():
     st.markdown(f" # Observations")
     spc_meso_fixed()
-
-    preset_keys = list(CITY_PRESETS.keys())
-    options = preset_keys  
-
-    default_city = st.session_state.city_key if st.session_state.city_key in preset_keys else preset_keys[0]
-    default_index = options.index(default_city)
-    left, right = st.columns([1, 3], gap="large")
-    with left:
-        selection = st.selectbox("Location", options, index=default_index, key="obs_location_select")
-    if selection != st.session_state.city_key:
-        lat, lon = CITY_PRESETS[selection]
-        set_location(selection, lat, lon)
-        st.rerun()
     lat = float(st.session_state.lat)
     lon = float(st.session_state.lon)
     radar_id = _get_nearest_radar_id(lat, lon) or "KTLX"  # fallback for Oklahoma

@@ -1,110 +1,135 @@
-# Antonio’s Severe Weather Dashboard  
-## Version 2.2.x
+# Antonio's Severe Weather Dashboard
+## Version 3.0
 
-A modular Streamlit-based severe weather dashboard built for real-time monitoring of SPC outlooks, NWS observations, and radar data.
-
-This project is designed as a portfolio-grade meteorology application focused on clean architecture, performance optimization, and operational weather awareness.
+Operational severe weather dashboard built with Streamlit for fast, location-aware monitoring of SPC outlooks, NWS observations, radar, and active severe alerts.
 
 ---
 
-## 🚀 Current Version: 2.2.x
+## What's New in v3
 
-### 🏠 Home Page
+- New nationwide severe alert ticker at the top of the app:
+  - Filters to only:
+    - Tornado Warning
+    - Severe Thunderstorm Warning
+    - Tornado Watch
+    - Severe Thunderstorm Watch
+  - Color-coded alert pills by alert type
+  - Continuous scrolling marquee with seamless loop
+  - Auto speed based on content length
+  - Safe fallback messages when no qualifying alerts are active or NWS is unavailable
 
-- SPC Day 1–7 Outlook Images  
-  - Day 1–3 Categorical  
-  - Day 4–7 Probabilistic  
+- Updated branding hero:
+  - Integrated custom logo in the hero section
+  - Current location and profile links retained under the logo
 
-- Dynamic SPC % Risk Breakdown at Selected Location  
-  - Tornado  
-  - Wind  
-  - Hail  
-
-- National Warning Counters (YTD)  
-  - Tornado Warnings  
-  - Severe Thunderstorm Warnings  
-
-- Location Selector (Preset Cities)
-
----
-
-### 🌡 Observations Page
-
-- Latest NWS Surface Observation near selected location  
-  - Temperature  
-  - Dewpoint  
-  - Relative Humidity  
-  - Sea Level Pressure  
-  - Visibility  
-  - Wind (direction, speed, gusts)  
-
-- Nearest NWS Radar (auto-detected via API)  
-  - Base Reflectivity Loop  
-  - Base Velocity Loop  
-
-- Radar cache-busting updates every minute  
+- Simplified location workflow:
+  - Preset severe-weather city selector for broad U.S. situational awareness
+  - Optional "Use Device" geolocation for local context
+  - Shared location state across pages
 
 ---
 
-## ⚡ Performance Improvements in v2.2
+## Core Features
 
-- Replaced `st.tabs()` with conditional navigation rendering  
-- Removed forced `st.rerun()` calls  
-- Cached SPC percentage calculations  
-- Cached national warning counters  
-- Cached NWS API requests  
-- Modularized page architecture  
+### Home
 
----
+- SPC Day 1-3 categorical outlook images
+- SPC Day 4-7 probabilistic outlook images
+- Location-based SPC hazard percentages
+  - Day 1: tornado, wind, hail
+  - Day 2: tornado, wind, hail
 
-## 🧱 Project Architecture
-evere-dashboard-v2/
-│
-├── app.py
-├── utils/
-│ ├── home.py
-│ ├── observations.py
-│ ├── spc.py
-│ ├── state.py
-│ ├── config.py
-│ ├── tornado_warning_counter.py
-│ ├── severe_thunderstorm_warning_counter.py
-│ └── ui.py
+### Observations
 
-Pages are modular and rendered conditionally to prevent unnecessary API calls.
+- SPC mesoanalysis embedded viewer
+- Nearest radar selection from NWS points API
+- Radar loops:
+  - Base Reflectivity
+  - Base Velocity
+- Nearest and most complete NWS surface observation selection
+- Observation cards:
+  - Temperature
+  - Dewpoint
+  - Relative Humidity
+  - Sea Level Pressure
+  - Visibility
+  - Wind and conditions
 
----
+### Statistics
 
-## 🔌 Data Sources
+- Year-to-date warning counters and related summary metrics
 
-- NOAA / NWS API  
-- SPC Outlook Products  
-- NWS RIDGE Radar GIFs  
+### Model Forecasts
 
----
-
-## 📌 Roadmap
-
-- Model Forecast Page (HRRR / GFS)
-- Interactive radar (Leaflet-based)
-- Device-based geolocation
-- Historical warning analytics
-- Mesonet integration
-- Deployment refinement
+- Placeholder section reserved for upcoming model integration
 
 ---
 
-## 🧠 Author
+## Project Structure
+
+```text
+severe-dashboard-v2/
+|-- app.py
+|-- assets/
+|   |-- banner.jpg
+|   |-- logo.png
+|-- utils/
+|   |-- about.py
+|   |-- config.py
+|   |-- home.py
+|   |-- location.py
+|   |-- nws_alerts.py
+|   |-- observations.py
+|   |-- satelite.py
+|   |-- spc.py
+|   |-- state.py
+|   |-- statistics.py
+|   |-- ticker.py
+|   |-- tornado_warning_counter.py
+|   |-- severe_thunderstorm_warning_counter.py
+|   `-- ui.py
+`-- requirements.txt
+```
+
+---
+
+## Data Sources
+
+- NOAA / NWS API:
+  - `https://api.weather.gov/alerts/active`
+  - `https://api.weather.gov/points/{lat},{lon}`
+  - station observations and related endpoints
+- SPC Outlook Products
+- NWS RIDGE radar imagery
+
+---
+
+## Run Locally
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+---
+
+## Deployment Notes
+
+- Streamlit Cloud-safe (no desktop GUI dependencies)
+- Cached NWS/SPC requests to reduce API load
+- Ensure `assets/logo.png` and `assets/banner.jpg` are present before deploy
+
+---
+
+## Author
 
 Antonio McElfresh  
-Meteorology Major – University of Oklahoma  
-GIS Minor  
-Amateur Radio Licensed  
+Meteorology - University of Oklahoma  
+GIS Minor
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
-This dashboard is for educational and informational purposes only.  
-Official forecasts and warnings should always be obtained directly from NOAA/NWS.
-
+This dashboard is for educational and informational use only.  
+For life-safety decisions, always use official NOAA/NWS products and local emergency management guidance.

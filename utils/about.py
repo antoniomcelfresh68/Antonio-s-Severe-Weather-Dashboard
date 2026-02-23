@@ -1,61 +1,68 @@
-# utils/about.py
-
 import streamlit as st
 
-def render():
+
+def render() -> None:
     st.subheader("About This Dashboard")
 
-    st.markdown("""
-    ## Overview
+    st.markdown(
+        """
+## Version
 
-    This Severe Weather Dashboard is a modular Streamlit application designed 
-    for real-time operational awareness of severe weather conditions.
+Antonio's Severe Weather Dashboard v3 is a modular Streamlit application
+built for severe-weather situational awareness across the United States.
 
-    The objective of this project is to consolidate official NOAA / NWS data 
-    into a clean, fast, and structured interface optimized for severe weather monitoring.
+## Overview
 
-    ---
+The app consolidates official NOAA/NWS and SPC products into a single,
+fast interface with shared location state and cached API workflows.
 
-    ## Features
+---
 
-    - SPC Day 1–7 outlook visualization
-    - Location-based SPC probability extraction
-    - National Tornado & Severe Thunderstorm Warning counters (YTD)
-    - Live NWS surface observations
-    - Auto-detected nearest NWS radar (reflectivity + velocity)
-    - Conditional page rendering for improved performance
+## Features
 
-    ---
+- Nationwide severe ticker with exact-event filtering:
+  - Tornado Warning
+  - Severe Thunderstorm Warning
+  - Tornado Watch
+  - Severe Thunderstorm Watch
+- SPC Day 1-3 categorical and Day 4-7 probabilistic outlook imagery
+- Location-based SPC hazard percentages
+- Preset severe-weather city selection with optional device geolocation
+- Nearest radar auto-selection via NWS points API
+- Latest nearby NWS observations from the most complete station
 
-    ## Technical Architecture
+---
 
-    - Built with Streamlit
-    - Modular `utils/` page structure
-    - Cached NOAA/NWS API responses
-    - Optimized navigation (no redundant rerenders)
-    - Radar served via NWS RIDGE products
+## Technical Architecture
 
-    ---
+- Built with Streamlit
+- Modular `utils/` architecture
+- Cached NOAA/NWS API responses to reduce request load
+- Conditional page rendering for performance
+- Radar loops served from NWS RIDGE products
+- Ticker marquee implemented with CSS animation and seamless looping
 
-    ## Project Purpose
+---
 
-    This dashboard serves as:
-    - A meteorology portfolio application
-    - A real-time severe weather situational awareness tool
-    - A demonstration of API integration and modular app design
+## Project Purpose
 
-    ---
+- Meteorology portfolio application
+- Real-time severe weather situational awareness tool
+- Demonstration of operational API integration and modular app design
 
-    ## Roadmap
+---
 
-    - Model Forecast page (HRRR / GFS)
-    - Interactive radar
-    - Device geolocation support
-    - Mesonet integration
-    """)
+## Roadmap
+
+- Model Forecast page replacement
+- Expanded statistics and historical summaries
+- Additional observation layers
+- Deployment hardening and release tooling
+"""
+    )
 
     st.markdown("---")
     st.caption(
         "This dashboard is for educational and informational purposes only. "
-        "Always rely on official NOAA/NWS products for operational decisions."
+        "Use official NOAA/NWS products and local emergency management guidance for life-safety decisions."
     )
