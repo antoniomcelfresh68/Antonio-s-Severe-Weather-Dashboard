@@ -37,7 +37,7 @@ render_global_hero(
     image_path="assets/banner.jpg",
     title=APP_TITLE,
     location=st.session_state.city_key,
-    version="v3.0.0",
+    version="v3.0.1",
     logo_path="assets/logo.png",
 )
 render_location_controls()
