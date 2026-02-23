@@ -20,11 +20,11 @@ render_global_hero(
     image_path="assets/banner.jpg",
     title=APP_TITLE,
     location=st.session_state.city_key,
-    version="v2.3.4",
+    version="v2.3.5",
 )
 
 nav = st.radio(
-    "",
+    "Navigation",
     ["Home", "Observations", "Model Forecasts", "Statistics", "About"],
     horizontal=True,
     key="nav",

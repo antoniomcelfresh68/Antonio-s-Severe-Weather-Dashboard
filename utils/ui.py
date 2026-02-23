@@ -56,6 +56,18 @@ iframe {
 
         footer {visibility: hidden;}
         #MainMenu {visibility: hidden;}
+        header[data-testid="stHeader"] {
+            display: block;
+            background: rgba(7, 13, 22, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        div[data-testid="stToolbar"] {
+            background: transparent;
+        }
+        div[data-testid="stDecoration"] {
+            background: rgba(7, 13, 22, 0.95);
+        }
+        [data-testid="stAppViewContainer"] > .main {padding-top: 3.2rem;}
         /* ---------- Center Tabs ---------- */
 
 div[data-baseweb="tab-list"] {
@@ -161,21 +173,6 @@ div[data-testid="stMetricValue"] {
 .obs-card.small .obs-card-value{
   font-size: 34px;
 }
-/* Fade bottom of hero image */
-.hero-wrap img {
-    -webkit-mask-image: linear-gradient(
-        to bottom,
-        rgba(0,0,0,1) 0%,
-        rgba(0,0,0,1) 75%,
-        rgba(0,0,0,0) 100%
-    );
-    mask-image: linear-gradient(
-        to bottom,
-        rgba(0,0,0,1) 0%,
-        rgba(0,0,0,1) 75%,
-        rgba(0,0,0,0) 100%
-    );
-}
 
 
         </style>
@@ -210,29 +207,53 @@ def render_global_hero(image_path: str, title: str, location: str, version: str)
     st.markdown(
         f"""
         <style>
+        /* Paint the hero image behind upper page content, then fade it out */
+        .block-container {{
+            position: relative;
+            isolation: isolate;
+        }}
+
+        .block-container::before {{
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            height: 1050px;
+            background-image: url("data:image/jpeg;base64,{encoded}");
+            background-position: center top;
+            background-size: cover;
+            background-repeat: no-repeat;
+            opacity: 0.42;
+            pointer-events: none;
+            z-index: 0;
+            -webkit-mask-image: linear-gradient(
+                to bottom,
+                rgba(0,0,0,0.95) 0%,
+                rgba(0,0,0,0.75) 45%,
+                rgba(0,0,0,0.28) 78%,
+                rgba(0,0,0,0) 100%
+            );
+            mask-image: linear-gradient(
+                to bottom,
+                rgba(0,0,0,0.95) 0%,
+                rgba(0,0,0,0.75) 45%,
+                rgba(0,0,0,0.28) 78%,
+                rgba(0,0,0,0) 100%
+            );
+        }}
+
+        .block-container > * {{
+            position: relative;
+            z-index: 1;
+        }}
+
         .hero-wrap {{
             position: relative;
             width: 100%;
             height: 320px;
-            border-radius: 22px;
-            overflow: hidden;
-            box-shadow: 0 0 60px rgba(0,0,0,0.35);
-        }}
-
-        /* NOTE: fade/mask lives in apply_global_ui() now */
-        .hero-wrap img {{
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-        }}
-
-        .hero-overlay {{
-            position: absolute;
-            inset: 0;
-            background:
-              radial-gradient(ellipse at center, rgba(0,0,0,0.10), rgba(0,0,0,0.60)),
-              linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.45) 60%, rgba(132,22,23,0.30) 100%);
+            overflow: visible;
+            background: transparent;
         }}
 
         .hero-text {{
@@ -284,8 +305,6 @@ def render_global_hero(image_path: str, title: str, location: str, version: str)
         </style>
 
         <div class="hero-wrap">
-          <img src="data:image/jpeg;base64,{encoded}" />
-          <div class="hero-overlay"></div>
           <div class="hero-text">
             <div>
               <h1>{title}</h1>

@@ -27,29 +27,29 @@ def render(
     row1 = st.columns(3, gap="small")
     with row1[0]:
         st.markdown("**Day 1 Categorical**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day1otlk.gif"), use_container_width=True)
+        st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day1otlk.gif"), width='stretch')
     with row1[1]:
         st.markdown("**Day 2 Categorical**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day2otlk.gif"), use_container_width=True)
+        st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day2otlk.gif"), width='stretch')
     with row1[2]:
         st.markdown("**Day 3 Categorical**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day3otlk.gif"), use_container_width=True)
+        st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day3otlk.gif"), width='stretch')
 
     st.divider()
 
     row2 = st.columns(4, gap="small")
     with row2[0]:
         st.markdown("**Day 4 Probability**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day4prob.gif"), use_container_width=True)
+        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day4prob.gif"), width='stretch')
     with row2[1]:
         st.markdown("**Day 5 Probability**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day5prob.gif"), use_container_width=True)
+        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day5prob.gif"), width='stretch')
     with row2[2]:
         st.markdown("**Day 6 Probability**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day6prob.gif"), use_container_width=True)
+        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day6prob.gif"), width='stretch')
     with row2[3]:
         st.markdown("**Day 7 Probability**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day7prob.gif"), use_container_width=True)
+        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day7prob.gif"), width='stretch')
 
     st.caption("Images are official SPC products. Day 4–8 is the experimental/probabilistic suite (we’re showing Day 4–7).")
 

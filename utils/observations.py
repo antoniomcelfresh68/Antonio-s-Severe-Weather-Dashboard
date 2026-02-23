@@ -208,14 +208,14 @@ def render(CITY_PRESETS, set_location):
         st.markdown(f"**Base Reflectivity ({radar_id})**")
         st.image(
         f"https://radar.weather.gov/ridge/standard/{radar_id}_loop.gif?b={bust}",
-        use_container_width=True,
+        width='stretch',
     )
 
     with col2:
         st.markdown(f"**Base Velocity ({radar_id})**")
         st.image(
         f"https://radar.weather.gov/ridge/standard/base_velocity/{radar_id}_loop.gif?b={bust}",
-        use_container_width=True,
+        width='stretch',
     )
 
     st.caption("Radar imagery: NOAA/NWS RIDGE (loop GIFs).")

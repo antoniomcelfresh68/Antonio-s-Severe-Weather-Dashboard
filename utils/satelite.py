@@ -80,7 +80,7 @@ def render_satellite_panel() -> None:
     url = _latest_url(sat_choice, sector_choice, product_choice)
 
     if _url_ok(url):
-        st.image(url, use_container_width=True)
+        st.image(url, width='stretch')
         st.caption(f"{sat_choice} • {sector_choice} • {product_choice}")
     else:
         st.warning("Satellite endpoint didn’t respond. Hit Refresh or switch product/sector.")
