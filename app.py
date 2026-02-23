@@ -11,12 +11,28 @@ from utils.ui import apply_global_ui, render_global_hero
 from utils.statistics import render as render_statistics
 from utils.location import render_location_controls
 from utils.ticker import render_severe_ticker
+from utils.gallery import render_gallery
+from utils.nws_alerts import get_severe_alerts
 
-st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title=APP_TITLE, page_icon="assets/tornado-cartoon-animation-clip-art-tornado.jpg", layout="wide", initial_sidebar_state="expanded")
 
 init_state()
 apply_global_ui()
-render_severe_ticker()
+
+if "simulate_outbreak_mode" not in st.session_state:
+    st.session_state.simulate_outbreak_mode = False
+if "simulate_outbreak_scenario" not in st.session_state:
+    st.session_state.simulate_outbreak_scenario = "Static"
+if "mock_alert_step" not in st.session_state:
+    st.session_state.mock_alert_step = 0
+
+if st.session_state.simulate_outbreak_mode:
+    scenario_mode = "dynamic" if st.session_state.simulate_outbreak_scenario == "Dynamic" else "static"
+    simulated_alerts = get_severe_alerts(source="mock", mode=scenario_mode)
+    render_severe_ticker(alerts=simulated_alerts)
+else:
+    render_severe_ticker()
+
 render_global_hero(
     image_path="assets/banner.jpg",
     title=APP_TITLE,
@@ -28,7 +44,7 @@ render_location_controls()
 
 nav = st.radio(
     "Navigation",
-    ["Home", "Observations", "Model Forecasts", "Statistics", "About"],
+    ["Home", "Observations", "Model Forecasts", "Statistics", "Photo Gallery", "About"],
     horizontal=True,
     key="nav",
 )
@@ -50,6 +66,9 @@ elif nav == "Model Forecasts":
 
 elif nav == "Statistics":
     render_statistics()
+
+elif nav == "Photo Gallery":
+    render_gallery()
 
 elif nav == "About":
     about.render(

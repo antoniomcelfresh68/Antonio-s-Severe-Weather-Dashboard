@@ -10,10 +10,92 @@ def apply_global_ui() -> None:
     st.markdown(
         """
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Montserrat:wght@600;700;800&display=swap');
+        :root {
+            --font-body: 'Inter', sans-serif;
+            --font-display: 'Montserrat', sans-serif;
+        }
+
         html, body, [data-testid="stAppViewContainer"] {
-    font-family: 'Inter', sans-serif;
-}
+            font-family: var(--font-body);
+            font-weight: 400;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        p, li, label, div[data-testid="stMarkdownContainer"] {
+            font-family: var(--font-body);
+            font-weight: 400;
+        }
+
+        /* Hero title: strong, clean, authoritative */
+        h1,
+        div[data-testid="stHeadingWithActionElements"] h1 {
+            font-family: var(--font-body);
+            font-weight: 800;
+            font-size: clamp(2.05rem, 1.6rem + 1.65vw, 3.0rem);
+            line-height: 1.16;
+            letter-spacing: 0.2px;
+            margin-top: 2.2rem;
+            margin-bottom: 1.05rem;
+        }
+
+        /* Section headers */
+        h2, h3,
+        div[data-testid="stHeadingWithActionElements"] h2,
+        div[data-testid="stHeadingWithActionElements"] h3,
+        .section-header {
+            font-family: var(--font-display);
+            font-weight: 700;
+            letter-spacing: 0.7px;
+            line-height: 1.25;
+            margin-top: 2.05rem;
+            margin-bottom: 0.8rem;
+        }
+
+        h2, div[data-testid="stHeadingWithActionElements"] h2 {
+            font-size: clamp(1.38rem, 1.2rem + 0.72vw, 2rem);
+        }
+
+        h3, div[data-testid="stHeadingWithActionElements"] h3 {
+            font-size: clamp(1.12rem, 1.02rem + 0.46vw, 1.48rem);
+        }
+
+        /* Navigation tabs */
+        div[data-baseweb="tab-list"] {
+            justify-content: center;
+            gap: 0.3rem;
+            margin-top: 0.2rem;
+            margin-bottom: 0.9rem;
+        }
+
+        button[data-baseweb="tab"] {
+            font-family: var(--font-body);
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: 0.45px;
+            padding: 0.7rem 1.28rem;
+            margin: 0 0.38rem;
+        }
+
+        /* Metric numbers / data */
+        div[data-testid="stMetricValue"] {
+            font-family: var(--font-body);
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        /* increase spacing between major Streamlit blocks */
+        [data-testid="stVerticalBlock"] > [data-testid="element-container"] {
+            margin-bottom: 1.0rem;
+        }
+
+        [data-testid="stVerticalBlock"] > [data-testid="element-container"]:has(h2),
+        [data-testid="stVerticalBlock"] > [data-testid="element-container"]:has(h3) {
+            margin-top: 1.05rem;
+        }
+
         /* gradient background */
         html, body, [data-testid="stAppViewContainer"] {
             height: 100%;
@@ -69,26 +151,10 @@ iframe {
             background: rgba(7, 13, 22, 0.95);
         }
         [data-testid="stAppViewContainer"] > .main {padding-top: 3.2rem;}
-        /* ---------- Center Tabs ---------- */
-
-div[data-baseweb="tab-list"] {
-    justify-content: center;
-}
-
-/* ---------- Make Tabs Bigger ---------- */
-
-button[data-baseweb="tab"] {
-    font-size: 1.15rem;
-    padding: 0.75rem 1.5rem;
-    margin: 0 0.75rem;
-    font-weight: 600;
-}
-
-/* Active tab underline stronger */
-
-button[data-baseweb="tab"][aria-selected="true"] {
-    border-bottom: 3px solid #841617;
-}
+        /* Active tab underline stronger */
+        button[data-baseweb="tab"][aria-selected="true"] {
+            border-bottom: 3px solid #841617;
+        }
 /* ============================= */
 /* Tornado Counter Metric Card  */
 /* ============================= */
@@ -109,10 +175,12 @@ div[data-testid="stMetric"]:hover {
 
 /* Label styling */
 div[data-testid="stMetricLabel"] {
+    font-family: 'Inter', sans-serif;
     font-size: 25px;
     text-transform: uppercase;
     letter-spacing: 1.4px;
     opacity: 0.75;
+    font-weight: 600;
 }
 
 /* Big number styling */
@@ -141,15 +209,17 @@ div[data-testid="stMetricValue"] {
 }
 
 .obs-card-title{
+  font-family: 'Montserrat', sans-serif;
   font-size: 22px;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 0.9px;
   opacity: .75;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 12px;
 }
 
 .obs-card-value{
+  font-family: 'Inter', sans-serif;
   font-size: 42px;
   font-weight: 800;
   color: #ff3b3b;     /* match metric number color */
@@ -157,6 +227,7 @@ div[data-testid="stMetricValue"] {
 }
 
 .obs-card-sub{
+  font-family: 'Inter', sans-serif;
   margin-top: 10px;
   opacity: .80;
   font-size: 18px;
@@ -173,6 +244,31 @@ div[data-testid="stMetricValue"] {
 }
 .obs-card.small .obs-card-value{
   font-size: 34px;
+}
+
+@media (max-width: 900px) {
+    .block-container {
+        padding-left: 1.15rem;
+        padding-right: 1.15rem;
+        padding-top: 1rem;
+    }
+    button[data-baseweb="tab"] {
+        font-size: 0.98rem;
+        margin: 0 0.16rem;
+        padding: 0.64rem 0.86rem;
+    }
+    div[data-testid="stMetricLabel"] {
+        font-size: 20px;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 34px;
+    }
+    .obs-card-title {
+        font-size: 18px;
+    }
+    .obs-card-value {
+        font-size: 34px;
+    }
 }
 
 

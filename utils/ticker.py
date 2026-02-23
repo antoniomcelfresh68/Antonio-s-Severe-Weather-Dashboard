@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from html import escape
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 import streamlit as st
 
@@ -18,6 +18,13 @@ def _event_css_class(event: str) -> str:
     return mapping.get(event, "fallback")
 
 
+def _pill_css_classes(item: Dict[str, Any]) -> str:
+    base_class = _event_css_class(str(item.get("event", "")))
+    if item.get("pds"):
+        return f"{base_class} pds"
+    return base_class
+
+
 def _calc_duration_seconds(items: List[Dict[str, str]]) -> int:
     total_chars = sum(len(str(it.get("display_text", ""))) for it in items)
     if total_chars <= 0:
@@ -26,9 +33,29 @@ def _calc_duration_seconds(items: List[Dict[str, str]]) -> int:
     return max(35, min(140, int(total_chars / 7)))
 
 
-def render_severe_ticker() -> None:
+def _inject_pds_outbreak(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if not st.session_state.get("simulate_pds_outbreak_scenario", False):
+        return items
+    simulated = [
+        {
+            "event": "Tornado Warning",
+            "display_text": "PDS Tornado Warning - simulated",
+            "pds": True,
+        },
+        {
+            "event": "Severe Thunderstorm Warning",
+            "display_text": "PDS Severe Thunderstorm Warning - simulated",
+            "pds": True,
+        },
+    ]
+    return simulated + items
+
+
+def render_severe_ticker(alerts: Optional[List[Dict[str, Any]]] = None) -> None:
     """Render severe-only nationwide ticker with color-coded alert pills."""
-    alerts, had_error = get_cached_severe_alerts_payload()
+    had_error = False
+    if alerts is None:
+        alerts, had_error = get_cached_severe_alerts_payload()
 
     if had_error:
         fallback = [{
@@ -47,8 +74,11 @@ def render_severe_ticker() -> None:
         items = alerts
         duration = _calc_duration_seconds(items)
 
+    items = _inject_pds_outbreak(list(items))
+    duration = _calc_duration_seconds(items)
+
     pills_html = "".join(
-        f'<span class="severe-pill {_event_css_class(str(item.get("event", "")))}">{escape(str(item.get("display_text", "")))}</span>'
+        f'<span class="severe-pill {_pill_css_classes(item)}">{escape(str(item.get("display_text", "")))}</span>'
         for item in items
     )
 
@@ -115,6 +145,10 @@ def render_severe_ticker() -> None:
       .severe-pill.fallback {{
         background: rgba(255,255,255,0.12);
         color: #ffffff;
+      }}
+      .severe-pill.pds {{
+        border: 3px solid rgba(214, 181, 255, 0.95);
+        box-shadow: 0 0 0 3px rgba(64, 19, 110, 0.55), 0 0 20px rgba(169, 105, 255, 0.72);
       }}
       @keyframes severeTickerMarquee {{
         from {{ transform: translateX(0); }}
