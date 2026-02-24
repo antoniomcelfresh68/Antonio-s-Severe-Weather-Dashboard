@@ -31,6 +31,26 @@ def nearest_city_label(lat: float, lon: float) -> str:
     return f"{lat:.3f}, {lon:.3f}"
 
 
+def _apply_selected_preset() -> None:
+    """Apply preset selection atomically via widget callback."""
+    selection = st.session_state.get("location_preset_select")
+    if selection not in CITY_PRESETS:
+        return
+    if selection == st.session_state.city_key:
+        return
+    lat, lon = CITY_PRESETS[selection]
+    set_location(selection, lat, lon)
+
+
+def sync_location_from_widget_state() -> None:
+    """
+    Sync session location from widget state early in a run so upstream fetches use one location.
+    """
+    if "location_preset_select" not in st.session_state:
+        return
+    _apply_selected_preset()
+
+
 def render_location_controls() -> None:
     """Render shared location controls: preset list + device geolocation."""
     st.markdown("### Location")
@@ -59,11 +79,12 @@ def render_location_controls() -> None:
     with controls_col:
         preset_col, device_col = st.columns([1.25, 1], gap="small")
         with preset_col:
-            selection = st.selectbox(
+            st.selectbox(
                 "Preset City",
                 options=preset_keys,
                 index=default_idx,
                 key="location_preset_select",
+                on_change=_apply_selected_preset,
             )
         with device_col:
             st.markdown("<div style='height: 1.78rem;'></div>", unsafe_allow_html=True)
@@ -73,11 +94,6 @@ def render_location_controls() -> None:
                 key="location_device_btn",
                 type="primary",
             )
-
-    if selection != st.session_state.city_key:
-        lat, lon = CITY_PRESETS[selection]
-        set_location(selection, lat, lon)
-        st.rerun()
 
     if use_device:
         st.session_state.device_loc_nonce = st.session_state.get("device_loc_nonce", 0) + 1
@@ -99,8 +115,10 @@ def render_location_controls() -> None:
             lat = coords.get("latitude")
             lon = coords.get("longitude")
             if lat is not None and lon is not None:
-                label = nearest_city_label(float(lat), float(lon))
-                set_location(label, float(lat), float(lon))
+                new_lat = float(lat)
+                new_lon = float(lon)
+                label = nearest_city_label(new_lat, new_lon)
+                set_location(label, new_lat, new_lon)
                 st.session_state.device_loc_pending = False
                 st.rerun()
 

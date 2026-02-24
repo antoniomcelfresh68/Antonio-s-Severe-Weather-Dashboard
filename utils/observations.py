@@ -177,21 +177,31 @@ def get_location_temp_dew_f(lat: float, lon: float) -> Tuple[Optional[float], Op
     Return latest temperature/dewpoint (degF) from the same NWS observation workflow
     used by the observations page.
     """
-    obs, _ = _get_nws_latest_obs_near_point(lat, lon)
-    if not obs:
-        return None, None
-    temp_c = _safe(obs, "temperature", "value")
-    dew_c = _safe(obs, "dewpoint", "value")
-    return _c_to_f(temp_c), _c_to_f(dew_c)
+    temp_f, dew_f, _wind, _cond = get_location_glance(lat, lon)
+    return temp_f, dew_f
 
 @st.cache_data(ttl=120, show_spinner=False)
 def get_location_wind_conditions(lat: float, lon: float) -> Tuple[str, str]:
     """
     Return compact wind (direction + speed) and current conditions text for a location.
     """
+    _temp, _dew, wind_str, cond_str = get_location_glance(lat, lon)
+    return wind_str, cond_str
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def get_location_glance(lat: float, lon: float) -> Tuple[Optional[float], Optional[float], str, str]:
+    """
+    Return temp/dew (degF) and compact wind/conditions from a single cached lookup.
+    """
     obs, _ = _get_nws_latest_obs_near_point(lat, lon)
     if not obs:
-        return "--", "--"
+        return None, None, "--", "--"
+
+    temp_c = _safe(obs, "temperature", "value")
+    dew_c = _safe(obs, "dewpoint", "value")
+    temp_f = _c_to_f(temp_c)
+    dew_f = _c_to_f(dew_c)
 
     wind_dir = _safe(obs, "windDirection", "value")
     wind_spd_ms = _safe(obs, "windSpeed", "value")
@@ -201,12 +211,12 @@ def get_location_wind_conditions(lat: float, lon: float) -> Tuple[str, str]:
     wind_str = "--"
     if wind_spd_mph is not None:
         if wind_dir is not None and wd_card is not None:
-            wind_str = f"{wd_card} ({wind_dir:.0f}°) {wind_spd_mph:.0f} mph"
+            wind_str = f"{wd_card} ({wind_dir:.0f} deg) {wind_spd_mph:.0f} mph"
         else:
             wind_str = f"{wind_spd_mph:.0f} mph"
 
     cond_str = (obs.get("textDescription") or "").strip() or "--"
-    return wind_str, cond_str
+    return temp_f, dew_f, wind_str, cond_str
 
 def spc_meso_fixed():
     url = "https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=19&parm=pmsl"
