@@ -34,22 +34,45 @@ def nearest_city_label(lat: float, lon: float) -> str:
 def render_location_controls() -> None:
     """Render shared location controls: preset list + device geolocation."""
     st.markdown("### Location")
-    st.caption("Pick a preset severe-weather city for a broad U.S. picture, or use your device location.")
 
-    select_col, device_col = st.columns([3, 1], gap="small")
+    st.markdown(
+        """
+        <style>
+        button[data-testid="stBaseButton-primary"] {
+            border: 2px solid #ff2b2b !important;
+            box-shadow: 0 0 7px rgba(255, 43, 43, 0.72), 0 0 18px rgba(255, 20, 20, 0.48) !important;
+        }
+        button[data-testid="stBaseButton-primary"]:hover {
+            border-color: #ff4a4a !important;
+            box-shadow: 0 0 10px rgba(255, 74, 74, 0.82), 0 0 22px rgba(255, 35, 35, 0.54) !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    controls_col, _right_spacer = st.columns([2.1, 1.9], gap="small")
     preset_keys = list(CITY_PRESETS.keys())
     default_city = st.session_state.city_key if st.session_state.city_key in preset_keys else "Norman, OK"
     default_idx = preset_keys.index(default_city)
 
-    with select_col:
-        selection = st.selectbox(
-            "Preset City",
-            options=preset_keys,
-            index=default_idx,
-            key="location_preset_select",
-        )
-    with device_col:
-        use_device = st.button("Use Device", use_container_width=True, key="location_device_btn")
+    with controls_col:
+        preset_col, device_col = st.columns([1.25, 1], gap="small")
+        with preset_col:
+            selection = st.selectbox(
+                "Preset City",
+                options=preset_keys,
+                index=default_idx,
+                key="location_preset_select",
+            )
+        with device_col:
+            st.markdown("<div style='height: 1.78rem;'></div>", unsafe_allow_html=True)
+            use_device = st.button(
+                "Use location Device",
+                use_container_width=True,
+                key="location_device_btn",
+                type="primary",
+            )
 
     if selection != st.session_state.city_key:
         lat, lon = CITY_PRESETS[selection]

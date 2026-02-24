@@ -5,6 +5,13 @@ import streamlit as st
 from textwrap import dedent
 import base64
 import os
+import json
+import uuid
+import html
+import requests
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+import streamlit.components.v1 as components
 
 def apply_global_ui() -> None:
     st.markdown(
@@ -189,6 +196,100 @@ div[data-testid="stMetricValue"] {
     font-weight: 800;
     color: #ff3b3b;
 }
+
+/* ========================================== */
+/* Top-left temp/dewpoint glance panel        */
+/* ========================================== */
+
+.glance-panel-wrap{
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.15rem;
+  margin-bottom: 0.2rem;
+}
+
+.glance-panel{
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.34rem;
+  padding: 0.46rem 0.74rem;
+  border-radius: 14px;
+  background: linear-gradient(130deg, rgba(16, 20, 26, 0.95), rgba(79, 10, 10, 0.88));
+  border: 1px solid rgba(255, 112, 67, 0.65);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28), 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.glance-loc{
+  font-family: var(--font-body);
+  font-size: 0.80rem;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  color: rgba(255,255,255,0.82);
+}
+
+.glance-time{
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: rgba(255,255,255,0.92);
+}
+
+.glance-time.local{
+  color: #ffd166; /* warm highlight for local time */
+}
+
+.glance-time.zulu{
+  color: #8bd3ff; /* cool standardized tone for UTC/Zulu */
+}
+
+.glance-val{
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: #ffffff;
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.glance-time{
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.glance-val.temp{
+  color: #ff8a65; /* warm temp convention */
+}
+
+.glance-val.dew{
+  color: #74d7ff; /* cool moisture convention */
+}
+
+.glance-val.wind{
+  color: #d7e9ff; /* neutral-cool wind tone */
+}
+
+.glance-val.cond{
+  color: #d2ffd2; /* readable condition accent */
+}
+
+@media (max-width: 900px) {
+  .glance-panel{
+    max-width: 240px;
+  }
+}
 /* ============================= */
 /* Observations detail cards     */
 /* ============================= */
@@ -293,8 +394,131 @@ def obs_small_card(title: str, value: str) -> None:
   <div class="obs-card-title">{title}</div>
   <div class="obs-card-value">{value}</div>
 </div>
-"""
+    """
     st.markdown(dedent(html), unsafe_allow_html=True)
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _timezone_for_lat_lon(lat: float, lon: float) -> str:
+    try:
+        r = requests.get(
+            f"https://api.weather.gov/points/{lat:.4f},{lon:.4f}",
+            headers={
+                "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
+                "Accept": "application/geo+json, application/json",
+            },
+            timeout=20,
+        )
+        r.raise_for_status()
+        tz_name = ((r.json() or {}).get("properties") or {}).get("timeZone")
+        if isinstance(tz_name, str) and tz_name:
+            return tz_name
+    except Exception:
+        pass
+    return "UTC"
+
+def render_temp_dew_glance(
+    location: str,
+    temp_f: Optional[float],
+    dew_f: Optional[float],
+    lat: float,
+    lon: float,
+) -> None:
+    def fmt(v: Optional[float]) -> str:
+        if v is None:
+            return "--"
+        return f"{int(round(v))}&deg;F"
+
+    tz_name = _timezone_for_lat_lon(lat, lon)
+    try:
+        local_tz = ZoneInfo(tz_name)
+    except Exception:
+        local_tz = timezone.utc
+        tz_name = "UTC"
+
+    now_utc = datetime.now(timezone.utc)
+    now_local = now_utc.astimezone(local_tz)
+    local_initial = f"Local Time: {now_local:%H:%M:%S} {now_local:%Z}"
+    zulu_initial = f"Zulu Time: {now_utc:%H:%M:%S} UTC"
+
+    local_id = f"glance-local-{uuid.uuid4().hex}"
+    zulu_id = f"glance-zulu-{uuid.uuid4().hex}"
+    location_safe = html.escape(location)
+
+    panel_html = f"""
+<div class="glance-panel-wrap">
+  <div class="glance-panel" aria-label="Current local observations">
+    <span class="glance-loc">{location_safe}</span>
+    <span class="glance-time local" id="{local_id}">{local_initial}</span>
+    <span class="glance-time zulu" id="{zulu_id}">{zulu_initial}</span>
+    <span class="glance-val temp">Temp: {fmt(temp_f)}</span>
+    <span class="glance-val dew">Dew Point: {fmt(dew_f)}</span>
+  </div>
+</div>
+"""
+    st.markdown(dedent(panel_html), unsafe_allow_html=True)
+    components.html(
+        f"""
+<script>
+const localId = {json.dumps(local_id)};
+const zuluId = {json.dumps(zulu_id)};
+const tzName = {json.dumps(tz_name)};
+
+function two(n) {{
+  return String(n).padStart(2, '0');
+}}
+
+function formatLocal(now) {{
+  const parts = new Intl.DateTimeFormat('en-US', {{
+    timeZone: tzName,
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short'
+  }}).formatToParts(now);
+
+  const hour = parts.find(p => p.type === 'hour')?.value ?? '00';
+  const minute = parts.find(p => p.type === 'minute')?.value ?? '00';
+  const second = parts.find(p => p.type === 'second')?.value ?? '00';
+  const zone = parts.find(p => p.type === 'timeZoneName')?.value ?? 'UTC';
+  return `Local Time: ${{hour}}:${{minute}}:${{second}} ${{zone}}`;
+}}
+
+function formatZulu(now) {{
+  return `Zulu Time: ${{two(now.getUTCHours())}}:${{two(now.getUTCMinutes())}}:${{two(now.getUTCSeconds())}} UTC`;
+}}
+
+function updateClock() {{
+  const localNode = parent.document.getElementById(localId);
+  const zuluNode = parent.document.getElementById(zuluId);
+  if (!localNode || !zuluNode) {{
+    return;
+  }}
+  const now = new Date();
+  localNode.textContent = formatLocal(now);
+  zuluNode.textContent = formatZulu(now);
+}}
+
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+""",
+        height=0,
+        width=0,
+    )
+
+def render_wind_conditions_glance(wind_text: str, conditions_text: str) -> None:
+    wind_safe = html.escape((wind_text or "--").strip() or "--")
+    cond_safe = html.escape((conditions_text or "--").strip() or "--")
+    panel_html = f"""
+<div class="glance-panel-wrap">
+  <div class="glance-panel" aria-label="Current wind and conditions">
+    <span class="glance-val wind">Wind: {wind_safe}</span>
+    <span class="glance-val cond">Current Conditions: {cond_safe}</span>
+  </div>
+</div>
+"""
+    st.markdown(dedent(panel_html), unsafe_allow_html=True)
 
 def render_global_hero(
     image_path: str,

@@ -49,6 +49,13 @@ def _ms_to_mph(ms: Optional[float]) -> Optional[float]:
         return None
     return ms * 2.236936
 
+def _deg_to_compass(deg: Optional[float]) -> Optional[str]:
+    if deg is None:
+        return None
+    dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+    i = int((deg % 360) / 22.5 + 0.5) % 16
+    return dirs[i]
+
 def _fmt_num(x: Optional[float], suffix: str = "", digits: int = 0) -> str:
     if x is None:
         return "—"
@@ -164,6 +171,43 @@ def _get_nws_latest_obs_near_point(lat: float, lon: float) -> Tuple[Optional[Dic
     except Exception:
         return None, None
 
+@st.cache_data(ttl=120, show_spinner=False)
+def get_location_temp_dew_f(lat: float, lon: float) -> Tuple[Optional[float], Optional[float]]:
+    """
+    Return latest temperature/dewpoint (degF) from the same NWS observation workflow
+    used by the observations page.
+    """
+    obs, _ = _get_nws_latest_obs_near_point(lat, lon)
+    if not obs:
+        return None, None
+    temp_c = _safe(obs, "temperature", "value")
+    dew_c = _safe(obs, "dewpoint", "value")
+    return _c_to_f(temp_c), _c_to_f(dew_c)
+
+@st.cache_data(ttl=120, show_spinner=False)
+def get_location_wind_conditions(lat: float, lon: float) -> Tuple[str, str]:
+    """
+    Return compact wind (direction + speed) and current conditions text for a location.
+    """
+    obs, _ = _get_nws_latest_obs_near_point(lat, lon)
+    if not obs:
+        return "--", "--"
+
+    wind_dir = _safe(obs, "windDirection", "value")
+    wind_spd_ms = _safe(obs, "windSpeed", "value")
+    wind_spd_mph = _ms_to_mph(wind_spd_ms)
+    wd_card = _deg_to_compass(wind_dir)
+
+    wind_str = "--"
+    if wind_spd_mph is not None:
+        if wind_dir is not None and wd_card is not None:
+            wind_str = f"{wd_card} ({wind_dir:.0f}°) {wind_spd_mph:.0f} mph"
+        else:
+            wind_str = f"{wind_spd_mph:.0f} mph"
+
+    cond_str = (obs.get("textDescription") or "").strip() or "--"
+    return wind_str, cond_str
+
 def spc_meso_fixed():
     url = "https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=19&parm=pmsl"
 
@@ -240,13 +284,6 @@ def render():
 
     slp_mb = None if slp_pa is None else slp_pa / 100.0
     vis_mi = None if vis_m is None else vis_m / 1609.344
-
-    def _deg_to_compass(deg: Optional[float]) -> Optional[str]:
-        if deg is None:
-            return None
-        dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"]
-        i = int((deg % 360) / 22.5 + 0.5) % 16
-        return dirs[i]
 
     wd_card = _deg_to_compass(wind_dir)
     wind_str = "—"

@@ -5,9 +5,18 @@ from utils.config import APP_TITLE
 from utils.state import init_state
 from utils.spc import get_spc_location_percents_cached as get_spc_location_percents
 import utils.home as home
-from utils.observations import render as render_observations
+from utils.observations import (
+    render as render_observations,
+    get_location_temp_dew_f,
+    get_location_wind_conditions,
+)
 import utils.about as about
-from utils.ui import apply_global_ui, render_global_hero
+from utils.ui import (
+    apply_global_ui,
+    render_global_hero,
+    render_temp_dew_glance,
+    render_wind_conditions_glance,
+)
 from utils.statistics import render as render_statistics
 from utils.location import render_location_controls
 from utils.ticker import render_severe_ticker
@@ -33,13 +42,29 @@ if st.session_state.simulate_outbreak_mode:
 else:
     render_severe_ticker()
 
-render_global_hero(
-    image_path="assets/banner.jpg",
-    title=APP_TITLE,
-    location=st.session_state.city_key,
-    version="v3.0.1",
-    logo_path="assets/logo.png",
-)
+top_left, top_center, top_right_spacer = st.columns([1.2, 3.6, 1.2], gap="large")
+
+with top_left:
+    temp_f, dew_f = get_location_temp_dew_f(float(st.session_state.lat), float(st.session_state.lon))
+    render_temp_dew_glance(
+        st.session_state.city_key,
+        temp_f,
+        dew_f,
+        float(st.session_state.lat),
+        float(st.session_state.lon),
+    )
+    wind_text, conditions_text = get_location_wind_conditions(float(st.session_state.lat), float(st.session_state.lon))
+    render_wind_conditions_glance(wind_text, conditions_text)
+
+with top_center:
+    render_global_hero(
+        image_path="assets/banner.jpg",
+        title=APP_TITLE,
+        location=st.session_state.city_key,
+        version="v3.0.2",
+        logo_path="assets/logo.png",
+    )
+
 render_location_controls()
 
 nav = st.radio(
