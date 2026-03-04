@@ -1,81 +1,118 @@
-# util/home.py
-
 import streamlit as st
-from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
+
 from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_ytd
+from utils.spc_outlooks import (
+    get_day1_categorical_image_url,
+    get_day2_categorical_image_url,
+    get_day3_categorical_image_url,
+    get_day4_8_prob_image_url,
+)
+from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
+
 
 @st.cache_data(ttl=900)
 def tor_count_cached(y):
     return fetch_tor_warning_count_ytd(year=y)
 
+
 @st.cache_data(ttl=900)
 def svr_count_cached(y):
     return fetch_svr_warning_count_ytd(year=y)
 
-def render(
-    spc_img,
-    get_spc_location_percents,
-):
-    
-    st.markdown(" # SPC Convective Outlooks")
-    
 
-    # --- Images like v1.5 ---
-    # Layout: Day 1-3 top row, Day 4-7 bottom row
+def _render_spc_image(title: str, image_url: str | None, warning_text: str) -> None:
+    st.markdown(f"**{title}**")
+    if image_url:
+        st.image(image_url, width="stretch")
+    else:
+        st.warning(warning_text)
+
+
+def render(get_spc_location_percents):
+    st.markdown(" # SPC Convective Outlooks")
+
     row1 = st.columns(3, gap="small")
     with row1[0]:
-        st.markdown("**Day 1 Categorical**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day1otlk.gif"), width='stretch')
+        _render_spc_image(
+            "Day 1 Categorical",
+            get_day1_categorical_image_url(),
+            "Could not load the latest SPC Day 1 categorical outlook image.",
+        )
     with row1[1]:
-        st.markdown("**Day 2 Categorical**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day2otlk.gif"), width='stretch')
+        _render_spc_image(
+            "Day 2 Categorical",
+            get_day2_categorical_image_url(),
+            "Could not load the latest SPC Day 2 categorical outlook image.",
+        )
     with row1[2]:
-        st.markdown("**Day 3 Categorical**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/outlook/day3otlk.gif"), width='stretch')
+        _render_spc_image(
+            "Day 3 Categorical",
+            get_day3_categorical_image_url(),
+            "Could not load the latest SPC Day 3 categorical outlook image.",
+        )
 
     st.divider()
 
     row2 = st.columns(4, gap="small")
     with row2[0]:
-        st.markdown("**Day 4 Probability**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day4prob.gif"), width='stretch')
+        _render_spc_image(
+            "Day 4 Probability",
+            get_day4_8_prob_image_url(4),
+            "Could not load the SPC Day 4 probability outlook image.",
+        )
     with row2[1]:
-        st.markdown("**Day 5 Probability**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day5prob.gif"), width='stretch')
+        _render_spc_image(
+            "Day 5 Probability",
+            get_day4_8_prob_image_url(5),
+            "Could not load the SPC Day 5 probability outlook image.",
+        )
     with row2[2]:
-        st.markdown("**Day 6 Probability**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day6prob.gif"), width='stretch')
+        _render_spc_image(
+            "Day 6 Probability",
+            get_day4_8_prob_image_url(6),
+            "Could not load the SPC Day 6 probability outlook image.",
+        )
     with row2[3]:
-        st.markdown("**Day 7 Probability**")
-        st.image(spc_img("https://www.spc.noaa.gov/products/exper/day4-8/day7prob.gif"), width='stretch')
+        _render_spc_image(
+            "Day 7 Probability",
+            get_day4_8_prob_image_url(7),
+            "Could not load the SPC Day 7 probability outlook image.",
+        )
 
-    st.caption("Images are official SPC products. Day 4–8 is the experimental/probabilistic suite (we’re showing Day 4–7).")
+    st.caption("Images are official SPC products. Day 4-8 is the experimental probabilistic suite; this view shows Day 4-7.")
 
-    # --- SPC % at your location ---
     nums = get_spc_location_percents(
         float(st.session_state.lat),
         float(st.session_state.lon)
     )
 
-    def fmt(x):
+    def fmt_prob(x):
         return "0%" if x is None else f"{int(x)}%"
+
+    def fmt_hazard(prob, cig):
+        if prob is None and not cig:
+            return "0%"
+        if prob is None:
+            return cig
+        if cig:
+            return f"{int(prob)}% {cig}"
+        return f"{int(prob)}%"
 
     st.markdown(f"# SPC % for {st.session_state.city_key}")
 
-    # Day 1
     m1 = st.columns(3)
-    m1[0].metric("D1 TOR", fmt(nums.get("d1_tor")))
-    m1[1].metric("D1 WIND", fmt(nums.get("d1_wind")))
-    m1[2].metric("D1 HAIL", fmt(nums.get("d1_hail")))
+    m1[0].metric("D1 TOR", fmt_hazard(nums.get("d1_tor"), nums.get("d1_tor_cig")))
+    m1[1].metric("D1 WIND", fmt_hazard(nums.get("d1_wind"), nums.get("d1_wind_cig")))
+    m1[2].metric("D1 HAIL", fmt_hazard(nums.get("d1_hail"), nums.get("d1_hail_cig")))
 
-    # Day 2
     m2 = st.columns(3)
-    m2[0].metric("D2 TOR", fmt(nums.get("d2_tor")))
-    m2[1].metric("D2 WIND", fmt(nums.get("d2_wind")))
-    m2[2].metric("D2 HAIL", fmt(nums.get("d2_hail")))
+    m2[0].metric("D2 TOR", fmt_hazard(nums.get("d2_tor"), nums.get("d2_tor_cig")))
+    m2[1].metric("D2 WIND", fmt_hazard(nums.get("d2_wind"), nums.get("d2_wind_cig")))
+    m2[2].metric("D2 HAIL", fmt_hazard(nums.get("d2_hail"), nums.get("d2_hail_cig")))
 
-    # Day 3 (probabilistic only)
     m3 = st.columns(3)
-    m3[0].metric("D3 PROB", fmt(nums.get("d3_prob")))
+    m3[0].metric("D3 PROB", fmt_prob(nums.get("d3_prob")))
     m3[1].empty()
     m3[2].empty()
+
+    st.caption("Day 1-2 hazard values now reflect SPC probability contours plus Conditional Intensity Groups (CIG1-CIG3) when your location is inside those overlays.")

@@ -64,7 +64,7 @@ with top_center:
         image_path="assets/banner.jpg",
         title=APP_TITLE,
         location=st.session_state.city_key,
-        version="v3.0.3",
+        version="v3.1.3",
         logo_path="assets/logo.png",
     )
 
@@ -78,12 +78,7 @@ nav = st.radio(
 )
 
 if nav == "Home":
-    def spc_img(url: str) -> str:
-        return f"{url}?v=1"
-    home.render(
-        spc_img=spc_img,
-        get_spc_location_percents=get_spc_location_percents,
-    )
+    home.render(get_spc_location_percents=get_spc_location_percents)
 
 elif nav == "Observations":
     render_observations()

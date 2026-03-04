@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, Tuple
 import time
 from datetime import datetime, timezone
 import math
+import re
 from utils.ui import obs_card, obs_small_card
 import streamlit.components.v1 as components
 from utils.satelite import render_satellite_panel
@@ -14,6 +15,31 @@ HEADERS = {
     "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
     "Accept": "application/geo+json, application/json",
 }
+SPC_MESO_BASE = "https://www.spc.noaa.gov/exper/mesoanalysis/new"
+DEFAULT_MESO_SECTORS = [
+    ("19", "Full CONUS Sector"),
+    ("14", "Central Plains"),
+    ("20", "Midwest"),
+    ("21", "Great Lakes"),
+    ("22", "Great Basin"),
+    ("11", "Pac NW"),
+    ("12", "Southwest"),
+    ("13", "Northern Plains"),
+    ("15", "Southern Plains"),
+    ("16", "Northeast"),
+    ("17", "Mid-Atlantic"),
+    ("18", "Southeast"),
+]
+DEFAULT_MESO_PARAMETERS = [
+    ("pmsl", "Mean Sea-Level Pressure"),
+    ("sbcp", "Surface-Based CAPE"),
+    ("mlcp", "Mixed-Layer CAPE"),
+    ("mucp", "Most-Unstable CAPE"),
+    ("dcape", "DCAPE"),
+    ("srh1", "0-1 km SRH"),
+    ("eshr", "Effective Shear"),
+    ("lllr", "Low-Level Lapse Rates"),
+]
 
 def _get_nearest_radar_id(lat: float, lon: float) -> Optional[str]:
     """
@@ -38,6 +64,51 @@ def _safe(d: Dict[str, Any], *keys, default=None):
             return default
         cur = cur[k]
     return cur
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def _get_spc_meso_sector_options() -> list[tuple[str, str]]:
+    try:
+        response = requests.get(
+            f"{SPC_MESO_BASE}/",
+            headers={"User-Agent": HEADERS["User-Agent"], "Accept": "text/html, */*;q=0.8"},
+            timeout=20,
+        )
+        response.raise_for_status()
+    except requests.RequestException:
+        return DEFAULT_MESO_SECTORS
+
+    matches = re.findall(r'<!--\s*([^>]+?)\s*-->\s*<area id="s(\d+)"', response.text)
+    if not matches:
+        return DEFAULT_MESO_SECTORS
+
+    sectors = [("19", "Full CONUS Sector")]
+    sectors.extend((sector_id, label.strip()) for label, sector_id in matches)
+    return sectors
+
+
+def _normalize_meso_param(selected_param: str) -> list[tuple[str, str]]:
+    current = (selected_param or "pmsl").strip().lower() or "pmsl"
+    params = list(DEFAULT_MESO_PARAMETERS)
+    if all(code != current for code, _ in params):
+        params.insert(0, (current, f"Custom ({current})"))
+    return params
+
+
+def _get_query_param(name: str, default: str) -> str:
+    value = st.query_params.get(name, default)
+    if isinstance(value, list):
+        return value[0] if value else default
+    return str(value)
+
+
+def _set_meso_query_params(sector: str, parm: str) -> None:
+    st.query_params["sector"] = sector
+    st.query_params["parm"] = parm
+
+
+def _build_spc_meso_url(sector: str, parm: str) -> str:
+    return f"{SPC_MESO_BASE}/viewsector.php?sector={sector}&parm={parm}"
 
 def _c_to_f(c: Optional[float]) -> Optional[float]:
     if c is None:
@@ -218,26 +289,48 @@ def get_location_glance(lat: float, lon: float) -> Tuple[Optional[float], Option
     cond_str = (obs.get("textDescription") or "").strip() or "--"
     return temp_f, dew_f, wind_str, cond_str
 
-def spc_meso_fixed():
-    url = "https://www.spc.noaa.gov/exper/mesoanalysis/new/viewsector.php?sector=19&parm=pmsl"
+def render_spc_mesoanalysis() -> None:
+    sector_options = _get_spc_meso_sector_options()
+    sector_ids = [sector_id for sector_id, _ in sector_options]
+    sector_map = {sector_id: label for sector_id, label in sector_options}
 
-    components.html(
-        f"""
-        <iframe
-            src="{url}"
-            width="100%"
-            height="1000"
-            style="border:0;"
-            tabindex="-1"
-            loading="eager"
-        ></iframe>
-        """,
-        height=900,
-    )
+    selected_sector = _get_query_param("sector", "19")
+    if selected_sector not in sector_map:
+        selected_sector = "19"
+
+    selected_param = _get_query_param("parm", "pmsl").strip().lower() or "pmsl"
+    parameter_options = _normalize_meso_param(selected_param)
+    parameter_codes = [code for code, _ in parameter_options]
+    parameter_labels = dict(parameter_options)
+
+    controls = st.columns([1.4, 1.2, 1.6], gap="small")
+    with controls[0]:
+        selected_sector = st.selectbox(
+            "SPC sector",
+            options=sector_ids,
+            index=sector_ids.index(selected_sector),
+            format_func=lambda sector_id: sector_map.get(sector_id, sector_id),
+            key="spc_meso_sector",
+        )
+    with controls[1]:
+        selected_param = st.selectbox(
+            "Field",
+            options=parameter_codes,
+            index=parameter_codes.index(selected_param),
+            format_func=lambda code: parameter_labels.get(code, code),
+            key="spc_meso_param",
+        )
+    with controls[2]:
+        meso_url = _build_spc_meso_url(selected_sector, selected_param)
+        _set_meso_query_params(selected_sector, selected_param)
+        st.markdown("**Deep link**")
+        st.caption(meso_url)
+
+    components.iframe(meso_url, height=1000, scrolling=True)
 
 def render():
     st.markdown(f" # Observations")
-    spc_meso_fixed()
+    render_spc_mesoanalysis()
     lat = float(st.session_state.lat)
     lon = float(st.session_state.lon)
     radar_id = _get_nearest_radar_id(lat, lon) or "KTLX"  # fallback for Oklahoma
