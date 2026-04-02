@@ -15,6 +15,7 @@ from utils.observations import (
     get_location_glance,
 )
 import utils.about as about
+from utils.assistant import render_assistant
 from utils.ui import (
     apply_global_ui,
     build_spc_day1_summary_glance_panel,
@@ -104,7 +105,7 @@ with top_center:
         image_path="assets/banner.jpg",
         title=APP_TITLE,
         location=st.session_state.city_key,
-        version="v4.1.0",
+        version="v4.1.1",
         logo_path="assets/logo.png",
     )
 
@@ -126,6 +127,7 @@ nav = render_nav_cards(
 
 if nav == "Home":
     home.render(get_spc_location_percents=get_spc_location_percents)
+    render_assistant()
 
 elif nav == "Observations":
     render_observations()

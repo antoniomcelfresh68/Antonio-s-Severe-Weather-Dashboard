@@ -1,13 +1,13 @@
 # Antonio's Severe Weather Dashboard
-## Version 4.0
+## Version 4.1.1
 
 Operational severe weather dashboard built with Streamlit for fast, location-aware monitoring of SPC outlooks, NOAA/NWS forecasts and observations, radar, satellite imagery, and active severe alerts.
 
 ---
 
-## What's New in v4.0.0
+## What's New in v4.1.1
 
-- Version badge updated to `v4.0.0`
+- Version badge updated to `v4.1.1`
 - New searchable location workflow:
   - Search by city or street address
   - Autosuggested location matches

@@ -82,7 +82,7 @@ def render_satellite_panel() -> None:
           padding: 10px 12px;
           background: #112538;
           color: #f4f8fb;
-          font-size: 15px;
+          font-size: 16px;
         }}
         .sat-stage {{
           padding: 16px;
