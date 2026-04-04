@@ -142,7 +142,7 @@ with top_center:
         image_path="assets/banner.jpg",
         title=APP_TITLE,
         location=st.session_state.city_key,
-        version="v4.2.1",
+        version="v4.2.2",
         logo_path="assets/logo.png",
     )
 

@@ -1,12 +1,16 @@
 import html
+import logging
+import os
 
 import streamlit as st
 from utils.ai_context import BASE_SYSTEM_PROMPT, build_context_system_message
 
 try:
-    from openai import OpenAI
+    from openai import APIConnectionError, APIStatusError, OpenAI
 except ImportError:  # pragma: no cover - dependency is declared in requirements.txt
     OpenAI = None
+    APIConnectionError = None
+    APIStatusError = None
 
 
 SHOW_KEY = "show_ai"
@@ -15,6 +19,41 @@ ERROR_KEY = "weather_assistant_error"
 DRAFT_KEY = "weather_assistant_draft"
 DRAFT_CLEAR_KEY = "weather_assistant_clear_draft"
 SYSTEM_PROMPT = BASE_SYSTEM_PROMPT
+LOGGER = logging.getLogger(__name__)
+
+
+def _mask_secret(value: str | None) -> str:
+    if not value:
+        return "missing"
+    if len(value) <= 8:
+        return "***"
+    return f"{value[:4]}...{value[-4:]}"
+
+
+def _get_secret_value(name: str) -> tuple[str | None, str]:
+    env_value = os.getenv(name)
+    if env_value:
+        return env_value, "environment"
+
+    try:
+        secret_value = st.secrets.get(name)
+    except Exception as exc:
+        LOGGER.warning("Assistant debug: unable to read st.secrets for %s: %s", name, exc)
+        secret_value = None
+
+    if secret_value:
+        return str(secret_value), "streamlit-secrets"
+
+    return None, "missing"
+
+
+def _build_debug_error(message: str) -> str:
+    return f"Error connecting to AI service. {message}"
+
+
+def _emit_debug_log(message: str) -> None:
+    print(message)
+    LOGGER.warning(message)
 
 
 def _init_assistant_state() -> None:
@@ -679,25 +718,74 @@ def _build_api_messages() -> list[dict[str, str]]:
 
 def _fetch_assistant_reply() -> None:
     st.session_state[ERROR_KEY] = ""
+    messages = _build_api_messages()
 
     if OpenAI is None:
-        st.session_state[ERROR_KEY] = "Error connecting to AI service. Please try again."
+        _emit_debug_log("Assistant debug: OpenAI package is not available at runtime.")
+        st.session_state[ERROR_KEY] = _build_debug_error("OpenAI package missing on server.")
         return
 
     try:
-        api_key = st.secrets["OPENAI_API_KEY"]
+        api_key, api_key_source = _get_secret_value("OPENAI_API_KEY")
+        _emit_debug_log(
+            "Assistant debug: preparing OpenAI request. "
+            f"api_key_source={api_key_source} "
+            f"api_key_present={bool(api_key)} "
+            f"api_key_mask={_mask_secret(api_key)} "
+            "model=gpt-4o "
+            f"message_count={len(messages)}"
+        )
+        if not api_key:
+            raise RuntimeError(
+                "OPENAI_API_KEY is missing. Add it to Streamlit secrets or deployment environment variables."
+            )
+
         client = _get_openai_client(api_key)
         if client is None:
             raise RuntimeError("OpenAI client unavailable")
 
         response = client.chat.completions.create(
             model="gpt-4o",
-            messages=_build_api_messages(),
+            messages=messages,
+        )
+        _emit_debug_log(
+            "Assistant debug: OpenAI request succeeded. "
+            f"response_id={getattr(response, 'id', 'unknown')} "
+            f"choices={len(getattr(response, 'choices', []) or [])}"
         )
         reply = response.choices[0].message.content or "I couldn't generate a response."
         st.session_state[MESSAGES_KEY].append({"role": "assistant", "content": reply})
-    except Exception:
-        st.session_state[ERROR_KEY] = "Error connecting to AI service. Please try again."
+    except Exception as exc:
+        status_code = getattr(exc, "status_code", None)
+        response_body = None
+        response_obj = getattr(exc, "response", None)
+        if response_obj is not None:
+            response_body = getattr(response_obj, "text", None)
+            if response_body is None:
+                response_body = getattr(response_obj, "content", None)
+
+        _emit_debug_log(
+            "Assistant debug: OpenAI request failed. "
+            f"error_type={type(exc).__name__} "
+            f"status_code={status_code} "
+            f"response_body={response_body!r}"
+        )
+        LOGGER.exception("Assistant debug stack trace")
+
+        if APIStatusError is not None and isinstance(exc, APIStatusError):
+            detail = f"OpenAI API returned status {exc.status_code}."
+            if response_body:
+                detail = f"{detail} Response: {response_body}"
+            st.session_state[ERROR_KEY] = _build_debug_error(detail)
+            return
+
+        if APIConnectionError is not None and isinstance(exc, APIConnectionError):
+            st.session_state[ERROR_KEY] = _build_debug_error(
+                f"Network error while reaching OpenAI: {exc}"
+            )
+            return
+
+        st.session_state[ERROR_KEY] = _build_debug_error(str(exc))
 
 
 def _render_message_history() -> None:
