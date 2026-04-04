@@ -1,7 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import html
 
-import requests
 import streamlit as st
 
 from utils.severe_thunderstorm_warning_counter import fetch_svr_warning_count_ytd
@@ -20,7 +19,7 @@ from utils.tornado_warning_counter import fetch_tor_warning_count_ytd
 def tor_count_cached(y):
     try:
         return fetch_tor_warning_count_ytd(year=y)
-    except (requests.RequestException, ValueError):
+    except Exception:
         return "Unavailable"
 
 
@@ -28,8 +27,23 @@ def tor_count_cached(y):
 def svr_count_cached(y):
     try:
         return fetch_svr_warning_count_ytd(year=y)
-    except (requests.RequestException, ValueError, KeyError, TypeError):
+    except Exception:
         return "Unavailable"
+
+
+@st.cache_data(ttl=900)
+def get_warning_counts_bundle(year: int) -> tuple[dict[str, int | str], dict[str, str | bool]]:
+    tornado = tor_count_cached(year)
+    severe = svr_count_cached(year)
+    available = tornado != "Unavailable" or severe != "Unavailable"
+    return (
+        {"tornado": tornado, "severe": severe},
+        {
+            "status": "live" if available else "unavailable",
+            "summary": "National year-to-date warning counts." if available else "Warning-count services are unavailable right now.",
+            "degraded": not available,
+        },
+    )
 
 
 def _inject_spc_outlook_css() -> None:
@@ -427,11 +441,15 @@ def _inject_spc_outlook_css() -> None:
     )
 
 
-def _render_spc_image(image_url: str | None, warning_text: str) -> None:
+def _render_spc_image(image_url: str | None, warning_text: str, status_note: str | None = None) -> None:
     if image_url:
         st.image(image_url, width="stretch")
+        if status_note:
+            st.caption(status_note)
     else:
         st.warning(warning_text)
+        if status_note:
+            st.caption(status_note)
 
 
 def _render_outlook_card(
@@ -440,6 +458,7 @@ def _render_outlook_card(
     subtitle: str,
     image_url: str | None,
     warning_text: str,
+    status_note: str | None = None,
     secondary: bool = False,
     detail_day: int | None = None,
 ) -> None:
@@ -452,7 +471,7 @@ def _render_outlook_card(
     st.markdown(f'<div class="{label_class}">{kicker}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="{title_class}">{title}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="spc-card-subtitle">{subtitle}</div>', unsafe_allow_html=True)
-    _render_spc_image(image_url, warning_text)
+    _render_spc_image(image_url, warning_text, status_note=status_note)
     if detail_day is not None:
         if st.button(f"Open Day {detail_day} Details", key=f"spc-open-detail-{detail_day}", use_container_width=True):
             st.session_state["spc_open_detail_day"] = detail_day
@@ -478,6 +497,7 @@ def _render_outlook_group(
                 subtitle=card["subtitle"],
                 image_url=card["image_url"],
                 warning_text=card["warning_text"],
+                status_note=card.get("status_note"),
                 secondary=secondary,
                 detail_day=card.get("detail_day"),
             )
@@ -656,7 +676,7 @@ def _show_spc_detail_dialog(day: int, city_key: str, nums: dict) -> None:
     def _render_dialog() -> None:
         try:
             payload = get_day1_3_detail_payload(day)
-        except requests.RequestException:
+        except Exception:
             st.warning("Could not load the latest SPC detail products for this outlook.")
             return
 
@@ -703,29 +723,37 @@ def render(get_spc_location_percents):
             "day8": executor.submit(get_day4_8_prob_image_url, 8),
             "location": executor.submit(get_spc_location_percents, lat, lon),
         }
+    def _future_or_default(name: str, default):
+        try:
+            return image_futures[name].result()
+        except Exception:
+            return default
 
-    nums = image_futures["location"].result()
+    nums = _future_or_default("location", {})
 
     primary_cards = [
         {
             "title": "Day 1 Categorical",
             "subtitle": "Current-day severe thunderstorm risk areas and categorical highlights.",
-            "image_url": image_futures["day1"].result(),
+            "image_url": _future_or_default("day1", None),
             "warning_text": "Could not load the latest SPC Day 1 categorical outlook image.",
+            "status_note": "SPC imagery may be delayed during upstream outages.",
             "detail_day": 1,
         },
         {
             "title": "Day 2 Categorical",
             "subtitle": "Tomorrow's organized severe potential with updated corridor placement.",
-            "image_url": image_futures["day2"].result(),
+            "image_url": _future_or_default("day2", None),
             "warning_text": "Could not load the latest SPC Day 2 categorical outlook image.",
+            "status_note": "Last successful image is used when the live image check fails.",
             "detail_day": 2,
         },
         {
             "title": "Day 3 Categorical",
             "subtitle": "Short-range extended outlook for evolving severe weather setup confidence.",
-            "image_url": image_futures["day3"].result(),
+            "image_url": _future_or_default("day3", None),
             "warning_text": "Could not load the latest SPC Day 3 categorical outlook image.",
+            "status_note": "Source imagery updates on SPC's schedule and may lag brief outages.",
             "detail_day": 3,
         },
     ]
@@ -742,32 +770,37 @@ def render(get_spc_location_percents):
         {
             "title": "Day 4 Probability",
             "subtitle": "Longer-range probability guidance for emerging severe risk.",
-            "image_url": image_futures["day4"].result(),
+            "image_url": _future_or_default("day4", None),
             "warning_text": "Could not load the SPC Day 4 probability outlook image.",
+            "status_note": "Experimental long-range imagery can be unavailable between SPC updates.",
         },
         {
             "title": "Day 5 Probability",
             "subtitle": "Early look at possible severe corridors and broad pattern support.",
-            "image_url": image_futures["day5"].result(),
+            "image_url": _future_or_default("day5", None),
             "warning_text": "Could not load the SPC Day 5 probability outlook image.",
+            "status_note": "Experimental long-range imagery can be unavailable between SPC updates.",
         },
         {
             "title": "Day 6 Probability",
             "subtitle": "Experimental probabilistic signal as forecast spread begins to widen.",
-            "image_url": image_futures["day6"].result(),
+            "image_url": _future_or_default("day6", None),
             "warning_text": "Could not load the SPC Day 6 probability outlook image.",
+            "status_note": "Experimental long-range imagery can be unavailable between SPC updates.",
         },
         {
             "title": "Day 7 Probability",
             "subtitle": "Farthest-range SPC outlook in this view, best used for trend awareness.",
-            "image_url": image_futures["day7"].result(),
+            "image_url": _future_or_default("day7", None),
             "warning_text": "Could not load the SPC Day 7 probability outlook image.",
+            "status_note": "Experimental long-range imagery can be unavailable between SPC updates.",
         },
         {
             "title": "Day 8 Probability",
             "subtitle": "Final long-range SPC probability panel for broad severe pattern awareness.",
-            "image_url": image_futures["day8"].result(),
+            "image_url": _future_or_default("day8", None),
             "warning_text": "Could not load the SPC Day 8 probability outlook image.",
+            "status_note": "Experimental long-range imagery can be unavailable between SPC updates.",
         },
     ]
     _render_outlook_group(

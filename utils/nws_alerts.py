@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
-import requests
 import streamlit as st
+from utils.resilience import request_json
 
 NWS_ALERTS_URL = "https://api.weather.gov/alerts/active"
 CHICAGO_TZ = ZoneInfo("America/Chicago")
@@ -293,13 +293,18 @@ def fetch_us_severe_alerts(timeout: Tuple[int, int] = (3, 6)) -> List[Dict[str, 
     - Tornado Watch
     - Severe Thunderstorm Watch
     """
-    try:
-        resp = requests.get(NWS_ALERTS_URL, headers=HEADERS, timeout=timeout)
-        resp.raise_for_status()
-        data = resp.json() or {}
-        features = data.get("features", []) or []
-    except Exception:
+    data, status = request_json(
+        url=NWS_ALERTS_URL,
+        headers=HEADERS,
+        timeout=timeout,
+        endpoint="nws.alerts.active",
+        source="NOAA/NWS alerts",
+        cache_key="nws:alerts:active",
+        validator=lambda payload: payload if isinstance(payload, dict) else {},
+    )
+    if status.get("status") == "unavailable":
         return []
+    features = data.get("features", []) or []
 
     return _parse_features(features)
 
@@ -307,11 +312,14 @@ def fetch_us_severe_alerts(timeout: Tuple[int, int] = (3, 6)) -> List[Dict[str, 
 @st.cache_data(ttl=90, show_spinner=False)
 def get_cached_severe_alerts_payload() -> Tuple[List[Dict[str, Any]], bool]:
     """Return (alerts, had_error)."""
-    try:
-        resp = requests.get(NWS_ALERTS_URL, headers=HEADERS, timeout=(3, 6))
-        resp.raise_for_status()
-        data = resp.json() or {}
-        features = data.get("features", []) or []
-    except Exception:
-        return [], True
-    return _parse_features(features), False
+    data, status = request_json(
+        url=NWS_ALERTS_URL,
+        headers=HEADERS,
+        timeout=(3, 6),
+        endpoint="nws.alerts.active.cached",
+        source="NOAA/NWS alerts",
+        cache_key="nws:alerts:active:cached",
+        validator=lambda payload: payload if isinstance(payload, dict) else {},
+    )
+    features = data.get("features", []) or []
+    return _parse_features(features), status.get("status") == "unavailable"

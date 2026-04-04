@@ -6,6 +6,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
+import logging
 from pathlib import Path
 from textwrap import dedent
 from typing import Optional
@@ -15,6 +16,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from utils.nws import get_nws_point_properties
+
+
+LOGGER = logging.getLogger(__name__)
 
 def apply_global_ui() -> None:
     st.markdown(
@@ -390,6 +394,15 @@ div[data-testid="stMetricValue"] {
   color: var(--glance-number);
 }
 
+.glance-meta{
+  display: block;
+  margin-top: 0.08rem;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  line-height: 1.35;
+  color: rgba(255, 228, 214, 0.72);
+}
+
 .glance-time{
   display: block;
   max-width: 100%;
@@ -598,6 +611,7 @@ def build_temp_dew_glance_panel(
     dew_f: Optional[float],
     lat: float,
     lon: float,
+    footer_note: str | None = None,
 ) -> tuple[str, str, str, str]:
     def fmt(v: Optional[float]) -> str:
         if v is None:
@@ -626,6 +640,7 @@ def build_temp_dew_glance_panel(
     <span class="glance-time zulu" id="{zulu_id}">{zulu_initial}</span>
     <span class="glance-val"><span class="glance-label">Temp:</span> <span class="glance-number">{fmt(temp_f)}</span></span>
     <span class="glance-val"><span class="glance-label">Dew Point:</span> <span class="glance-number">{fmt(dew_f)}</span></span>
+    {f'<span class="glance-meta">{html.escape(footer_note)}</span>' if footer_note else ''}
 """
     panel_html = _build_glance_panel_html(
         dedent(content_html),
@@ -706,7 +721,7 @@ def render_statistics_glance(year: int, tornado_count: int | str, severe_count: 
     render_info_box_stack([build_statistics_glance_panel(year, tornado_count, severe_count)])
 
 
-def build_statistics_glance_panel(year: int, tornado_count: int | str, severe_count: int | str) -> str:
+def build_statistics_glance_panel(year: int, tornado_count: int | str, severe_count: int | str, footer_note: str | None = None) -> str:
     tor_safe = html.escape(str(tornado_count))
     svr_safe = html.escape(str(severe_count))
     content_html = f"""
@@ -714,6 +729,7 @@ def build_statistics_glance_panel(year: int, tornado_count: int | str, severe_co
     <span class="glance-time local">YTD {year}</span>
     <span class="glance-val"><span class="glance-label">Tornado Warnings:</span> <span class="glance-number">{tor_safe}</span></span>
     <span class="glance-val severe-storms"><span class="glance-label">Severe Thunderstorms:</span> <span class="glance-number">{svr_safe}</span></span>
+    {f'<span class="glance-meta">{html.escape(footer_note)}</span>' if footer_note else ''}
 """
     return _build_glance_panel_html(
         dedent(content_html),
@@ -731,6 +747,7 @@ def build_spc_day1_summary_glance_panel(
     tornado: int | None,
     wind: int | None,
     hail: int | None,
+    footer_note: str | None = None,
 ) -> str:
     def fmt_pct(value: int | None) -> str:
         return "None" if value is None else f"{value}%"
@@ -741,6 +758,7 @@ def build_spc_day1_summary_glance_panel(
     <span class="glance-val"><span class="glance-label">TOR -</span> <span class="glance-number">{fmt_pct(tornado)}</span></span>
     <span class="glance-val"><span class="glance-label">WND -</span> <span class="glance-number">{fmt_pct(wind)}</span></span>
     <span class="glance-val"><span class="glance-label">HAIL -</span> <span class="glance-number">{fmt_pct(hail)}</span></span>
+    {f'<span class="glance-meta">{html.escape(footer_note)}</span>' if footer_note else ''}
 """
     return _build_glance_panel_html(
         dedent(content_html),
@@ -753,6 +771,38 @@ def render_disclaimer_footer() -> None:
     st.caption(
         "Disclaimer: This dashboard is a personal, experimental project and should not be used for official decision-making."
     )
+
+
+def summarize_freshness(status: dict | None, *, fallback: str) -> str:
+    if not status:
+        return fallback
+    if status.get("status") == "stale":
+        cached_at = status.get("cached_at")
+        if cached_at:
+            return f"Last updated: {cached_at}. Live refresh failed, so cached data is shown."
+        return "Live refresh failed, so cached data is shown."
+    if status.get("status") == "unavailable":
+        error = status.get("error_message")
+        if error:
+            return f"Unavailable: {error}"
+        return "Data is unavailable right now."
+    source_timestamp = status.get("source_timestamp")
+    if source_timestamp:
+        return f"Source timestamp: {source_timestamp}"
+    checked_at = status.get("checked_at")
+    if checked_at:
+        return f"Last updated: {checked_at}"
+    return fallback
+
+
+def render_data_status(status: dict | None, *, label: str) -> None:
+    if not status:
+        return
+    message = summarize_freshness(status, fallback=f"{label} status unavailable.")
+    if status.get("status") == "unavailable":
+        st.info(f"{label}: {message}")
+    elif status.get("status") == "stale":
+        st.caption(f"{label}: {message}")
 
 
 @st.cache_data(show_spinner=False)

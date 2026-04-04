@@ -1,7 +1,7 @@
-import requests
 import streamlit as st
 
 from utils.nws import get_nws_point_properties
+from utils.resilience import request_json
 from utils.state import set_location
 
 HEADERS = {
@@ -69,8 +69,8 @@ def geocode_location_query(query: str) -> tuple[str, float, float] | None:
         return None
 
     try:
-        response = requests.get(
-            "https://nominatim.openstreetmap.org/search",
+        results, _status = request_json(
+            url="https://nominatim.openstreetmap.org/search",
             params={
                 "q": clean_query,
                 "format": "jsonv2",
@@ -78,10 +78,13 @@ def geocode_location_query(query: str) -> tuple[str, float, float] | None:
                 "addressdetails": 1,
             },
             headers=HEADERS,
-            timeout=20,
+            timeout=8,
+            endpoint="osm.nominatim.search.single",
+            source="OpenStreetMap Nominatim",
+            cache_key=f"nominatim:single:{clean_query.lower()}",
+            default_factory=list,
+            validator=lambda payload: payload if isinstance(payload, list) else [],
         )
-        response.raise_for_status()
-        results = response.json() or []
         if not results:
             return None
 
@@ -100,8 +103,8 @@ def geocode_location_suggestions(query: str, limit: int = 5) -> list[tuple[str, 
         return []
 
     try:
-        response = requests.get(
-            "https://nominatim.openstreetmap.org/search",
+        results, _status = request_json(
+            url="https://nominatim.openstreetmap.org/search",
             params={
                 "q": clean_query,
                 "format": "jsonv2",
@@ -109,10 +112,13 @@ def geocode_location_suggestions(query: str, limit: int = 5) -> list[tuple[str, 
                 "addressdetails": 1,
             },
             headers=HEADERS,
-            timeout=20,
+            timeout=8,
+            endpoint="osm.nominatim.search.suggestions",
+            source="OpenStreetMap Nominatim",
+            cache_key=f"nominatim:suggestions:{limit}:{clean_query.lower()}",
+            default_factory=list,
+            validator=lambda payload: payload if isinstance(payload, list) else [],
         )
-        response.raise_for_status()
-        results = response.json() or []
         suggestions: list[tuple[str, float, float]] = []
         seen: set[tuple[str, float, float]] = set()
 
@@ -137,7 +143,12 @@ def sync_location_from_widget_state() -> None:
 
 
 def render_location_controls() -> None:
-    """Render shared location controls: preset list + device geolocation."""
+    """Render shared location controls.
+
+    Streamlit session state is intentionally ephemeral here: it keeps location
+    selection stable within a session, but it is not durable across restarts or
+    across multiple app instances.
+    """
     pending_search_value = st.session_state.pop("location_search_query_pending", None)
     if pending_search_value is not None:
         st.session_state["location_search_query"] = pending_search_value
@@ -275,7 +286,7 @@ def render_location_controls() -> None:
     if use_search:
         result = geocode_location_query(search_query)
         if result is None:
-            st.warning("Location search did not find a match. Try a more specific city or street address.")
+            st.warning("Location search is unavailable or did not find a match. Try a more specific city or street address.")
         else:
             label, new_lat, new_lon = result
             set_location(label, new_lat, new_lon, source="search")
@@ -284,9 +295,8 @@ def render_location_controls() -> None:
     if st.session_state.get("device_loc_pending", False):
         try:
             from streamlit_js_eval import get_geolocation
-        except Exception as exc:
-            st.error("Device geolocation dependency is unavailable.")
-            st.exception(exc)
+        except Exception:
+            st.error("Device geolocation is unavailable in this deployment right now.")
             st.session_state.device_loc_pending = False
             return
 

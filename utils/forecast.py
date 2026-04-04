@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 import pandas as pd
-import requests
 import streamlit as st
 from utils.ai_context import update_page_ai_context
 
 from utils.nws import get_nws_point_properties
+from utils.resilience import request_json
 
 HEADERS = {
     "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
@@ -21,9 +21,16 @@ HEADERS = {
 
 @st.cache_data(ttl=900, show_spinner=False)
 def _get_json(url: str, timeout: int = 20) -> dict[str, Any]:
-    response = requests.get(url, headers=HEADERS, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
+    payload, _status = request_json(
+        url=url,
+        headers=HEADERS,
+        timeout=min(timeout, 8),
+        endpoint="nws.forecast.generic",
+        source="NOAA/NWS forecast",
+        cache_key=f"nws:forecast:{url}",
+        validator=lambda value: value if isinstance(value, dict) else {},
+    )
+    return payload
 
 
 @st.cache_data(ttl=900, show_spinner=False)

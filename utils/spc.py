@@ -2,9 +2,9 @@
 
 import re
 from concurrent.futures import ThreadPoolExecutor
-import requests
 import streamlit as st
 from typing import List, Optional
+from utils.resilience import request_json
 
 @st.cache_data(ttl=300, show_spinner=False)
 def get_spc_location_percents_cached(lat: float, lon: float) -> dict:
@@ -21,17 +21,33 @@ HEADERS = {
     "User-Agent": "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)",
     "Accept": "application/json",
 }
-def _get_json(url: str, params: Optional[dict] = None, timeout: int = 25) -> dict:
-    r = requests.get(url, params=params, headers=HEADERS, timeout=timeout)
-    r.raise_for_status()
-    return r.json()
+
+
+def _validate_dict_payload(payload: object) -> dict:
+    if not isinstance(payload, dict):
+        raise ValueError("Unexpected SPC payload type.")
+    return payload
+
+
+def _get_json(url: str, params: Optional[dict] = None, timeout: int = 8, endpoint: str = "spc.json") -> dict:
+    payload, _status = request_json(
+        url=url,
+        params=params,
+        headers=HEADERS,
+        timeout=timeout,
+        endpoint=endpoint,
+        source="NOAA/SPC map service",
+        cache_key=f"spc:{endpoint}:{url}:{repr(sorted((params or {}).items()))}",
+        validator=_validate_dict_payload,
+    )
+    return payload
 
 _service_info_cache: Optional[dict] = None
 
 def spc_service_info() -> dict:
     global _service_info_cache
     if _service_info_cache is None:
-        _service_info_cache = _get_json(SPC_BASE, params={"f": "pjson"})
+        _service_info_cache = _get_json(SPC_BASE, params={"f": "pjson"}, endpoint="spc.service_info")
     return _service_info_cache
 
 def find_layer_id(day_label: str, contains: str) -> Optional[int]:
@@ -62,7 +78,7 @@ def layer_geojson(layer_id: int) -> dict:
         "returnGeometry": "true",
         "f": "geojson",
     }
-    return _get_json(url, params=params)
+    return _get_json(url, params=params, endpoint=f"spc.layer_geojson.{layer_id}")
 
 
 def _point_in_ring(x: float, y: float, ring: list) -> bool:
@@ -203,7 +219,7 @@ def point_day_prob(lat: float, lon: float, day: str) -> Optional[int]:
         "returnGeometry": "false",
     }
 
-    data = _get_json(url, params=params)
+    data = _get_json(url, params=params, endpoint=f"spc.day_prob.{day.lower().replace(' ', '_')}")
 
     best = None
     for feat in data.get("features", []) or []:
@@ -278,7 +294,7 @@ def point_hazard_percent(lat: float, lon: float, day: str, hazard: str) -> Optio
         "resultRecordCount": "50",
     }
 
-    data = _get_json(url, params=params)
+    data = _get_json(url, params=params, endpoint=f"spc.point_hazard_percent.{day.lower().replace(' ', '_')}.{hz}")
 
     feats = data.get("features", []) or []
     if not feats:
@@ -310,7 +326,7 @@ def point_hazard_summary(lat: float, lon: float, day: str, hazard: str) -> dict:
         "resultRecordCount": "50",
     }
 
-    data = _get_json(url, params=params)
+    data = _get_json(url, params=params, endpoint=f"spc.point_hazard_summary.{day.lower().replace(' ', '_')}.{hz}")
 
     best_percent = None
     best_cig = None
@@ -371,23 +387,36 @@ def get_spc_location_percents(lat: float, lon: float) -> dict:
         "d2_hail": ("Day 2", "hail"),
     }
 
-    with ThreadPoolExecutor(max_workers=len(tasks) + 1) as executor:
+    with ThreadPoolExecutor(max_workers=len(tasks) + 2) as executor:
         futures = {
             key: executor.submit(point_hazard_summary, lat, lon, day, hazard)
             for key, (day, hazard) in tasks.items()
         }
         d3_future = executor.submit(point_day_prob, lat, lon, "Day 3")
         d1_cat_future = executor.submit(point_day1_3_category, lat, lon, "Day 1")
+    def _future_or_default(key: str) -> dict:
+        try:
+            return futures[key].result()
+        except Exception:
+            return {"percent": None, "cig": None}
 
-    d1_tor = futures["d1_tor"].result()
-    d1_wind = futures["d1_wind"].result()
-    d1_hail = futures["d1_hail"].result()
-    d2_tor = futures["d2_tor"].result()
-    d2_wind = futures["d2_wind"].result()
-    d2_hail = futures["d2_hail"].result()
+    d1_tor = _future_or_default("d1_tor")
+    d1_wind = _future_or_default("d1_wind")
+    d1_hail = _future_or_default("d1_hail")
+    d2_tor = _future_or_default("d2_tor")
+    d2_wind = _future_or_default("d2_wind")
+    d2_hail = _future_or_default("d2_hail")
+    try:
+        d3_prob = d3_future.result()
+    except Exception:
+        d3_prob = None
+    try:
+        day1_cat = d1_cat_future.result()
+    except Exception:
+        day1_cat = "NONE"
 
     return {
-        "day1_cat": d1_cat_future.result(),
+        "day1_cat": day1_cat,
         "d1_tor": d1_tor["percent"],
         "d1_tor_cig": d1_tor["cig"],
         "d1_wind": d1_wind["percent"],
@@ -401,8 +430,22 @@ def get_spc_location_percents(lat: float, lon: float) -> dict:
         "d2_wind_cig": d2_wind["cig"],
         "d2_hail": d2_hail["percent"],
         "d2_hail_cig": d2_hail["cig"],
-        "d3_prob": d3_future.result(),
+        "d3_prob": d3_prob,
     }
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_spc_location_percents_with_status(lat: float, lon: float) -> tuple[dict, dict]:
+    summary = get_spc_location_percents(lat, lon)
+    hazard_fields = ("d1_tor", "d1_wind", "d1_hail", "d2_tor", "d2_wind", "d2_hail", "d3_prob")
+    status = "live" if any(summary.get(field) is not None for field in hazard_fields) else "unavailable"
+    meta = {
+        "source": "NOAA/SPC outlook map service",
+        "status": status,
+        "summary": "Point-in-polygon and query-based SPC outlook summary." if status == "live" else "SPC point summary is unavailable right now.",
+        "degraded": status != "live",
+    }
+    return summary, meta
 
 
 def get_spc_day1_national_summary() -> dict:
@@ -447,3 +490,16 @@ def get_spc_day1_national_summary() -> dict:
         "wind": hazard_percents["wind"],
         "hail": hazard_percents["hail"],
     }
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_spc_day1_national_summary_with_status() -> tuple[dict, dict]:
+    summary = get_spc_day1_national_summary()
+    available = any(summary.get(key) is not None for key in ("tornado", "wind", "hail")) or summary.get("category") not in (None, "NONE")
+    meta = {
+        "source": "NOAA/SPC outlook map service",
+        "status": "live" if available else "unavailable",
+        "summary": "National Day 1 SPC summary." if available else "National Day 1 SPC summary is unavailable right now.",
+        "degraded": not available,
+    }
+    return summary, meta

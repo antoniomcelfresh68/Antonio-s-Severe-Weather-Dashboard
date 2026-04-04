@@ -3,7 +3,8 @@ import logging
 import os
 
 import streamlit as st
-from utils.ai_context import BASE_SYSTEM_PROMPT, build_context_system_message
+from utils.ai_context import BASE_SYSTEM_PROMPT
+from utils.site_context import build_assistant_context, build_chat_prompt
 
 try:
     from openai import APIConnectionError, APIStatusError, OpenAI
@@ -20,14 +21,6 @@ DRAFT_KEY = "weather_assistant_draft"
 DRAFT_CLEAR_KEY = "weather_assistant_clear_draft"
 SYSTEM_PROMPT = BASE_SYSTEM_PROMPT
 LOGGER = logging.getLogger(__name__)
-
-
-def _mask_secret(value: str | None) -> str:
-    if not value:
-        return "missing"
-    if len(value) <= 8:
-        return "***"
-    return f"{value[:4]}...{value[-4:]}"
 
 
 def _get_secret_value(name: str) -> tuple[str | None, str]:
@@ -52,8 +45,22 @@ def _build_debug_error(message: str) -> str:
 
 
 def _emit_debug_log(message: str) -> None:
-    print(message)
     LOGGER.warning(message)
+
+
+def _assistant_enabled() -> bool:
+    raw = os.getenv("ENABLE_WEATHER_ASSISTANT")
+    if raw is None:
+        try:
+            raw = st.secrets.get("ENABLE_WEATHER_ASSISTANT")
+        except Exception:
+            raw = None
+
+    if raw is None:
+        api_key, _source = _get_secret_value("OPENAI_API_KEY")
+        return bool(api_key)
+
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _init_assistant_state() -> None:
@@ -708,30 +715,43 @@ def _inject_dialog_css() -> None:
     )
 
 
-def _build_api_messages() -> list[dict[str, str]]:
+def _build_api_messages(user_message: str) -> list[dict[str, str]]:
+    prior_messages = list(st.session_state[MESSAGES_KEY])
+    if prior_messages and prior_messages[-1].get("role") == "user" and prior_messages[-1].get("content") == user_message:
+        prior_messages = prior_messages[:-1]
+    prior_messages = prior_messages[-6:]
+
+    prompt_messages = build_chat_prompt(build_assistant_context(), user_message)
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
-        build_context_system_message(),
-        *st.session_state[MESSAGES_KEY],
+        prompt_messages[0],
+        prompt_messages[1],
+        *prior_messages,
+        prompt_messages[2],
     ]
 
 
-def _fetch_assistant_reply() -> None:
+def _fetch_assistant_reply(user_message: str) -> None:
     st.session_state[ERROR_KEY] = ""
-    messages = _build_api_messages()
 
     if OpenAI is None:
         _emit_debug_log("Assistant debug: OpenAI package is not available at runtime.")
         st.session_state[ERROR_KEY] = _build_debug_error("OpenAI package missing on server.")
         return
 
+    if not _assistant_enabled():
+        st.session_state[ERROR_KEY] = _build_debug_error(
+            "The assistant is disabled for this deployment. Set ENABLE_WEATHER_ASSISTANT=true to turn it on."
+        )
+        return
+
+    messages = _build_api_messages(user_message)
     try:
         api_key, api_key_source = _get_secret_value("OPENAI_API_KEY")
         _emit_debug_log(
             "Assistant debug: preparing OpenAI request. "
             f"api_key_source={api_key_source} "
             f"api_key_present={bool(api_key)} "
-            f"api_key_mask={_mask_secret(api_key)} "
             "model=gpt-4o "
             f"message_count={len(messages)}"
         )
@@ -760,9 +780,7 @@ def _fetch_assistant_reply() -> None:
         response_body = None
         response_obj = getattr(exc, "response", None)
         if response_obj is not None:
-            response_body = getattr(response_obj, "text", None)
-            if response_body is None:
-                response_body = getattr(response_obj, "content", None)
+            response_body = "<redacted>"
 
         _emit_debug_log(
             "Assistant debug: OpenAI request failed. "
@@ -774,8 +792,6 @@ def _fetch_assistant_reply() -> None:
 
         if APIStatusError is not None and isinstance(exc, APIStatusError):
             detail = f"OpenAI API returned status {exc.status_code}."
-            if response_body:
-                detail = f"{detail} Response: {response_body}"
             st.session_state[ERROR_KEY] = _build_debug_error(detail)
             return
 
@@ -829,13 +845,27 @@ def _render_message_history() -> None:
 def render_assistant_launcher() -> None:
     _init_assistant_state()
     _inject_launcher_css()
+    assistant_available = _assistant_enabled()
 
-    if st.button("AI Weather Assistant", key="weather_assistant_launcher", use_container_width=True):
+    if st.button(
+        "AI Weather Assistant" if assistant_available else "AI Weather Assistant Unavailable",
+        key="weather_assistant_launcher",
+        use_container_width=True,
+        disabled=not assistant_available,
+    ):
         st.session_state[SHOW_KEY] = True
         st.rerun()
 
     st.markdown(
-        '<div class="assistant-launcher-meta">Beta disclaimer: experimental assistant output may be inaccurate.</div>',
+        (
+            '<div class="assistant-launcher-meta">'
+            + (
+                "Beta disclaimer: experimental assistant output may be inaccurate."
+                if assistant_available
+                else "Assistant is disabled in this deployment unless ENABLE_WEATHER_ASSISTANT is turned on."
+            )
+            + "</div>"
+        ),
         unsafe_allow_html=True,
     )
     st.markdown('<div class="assistant-launcher-anchor"></div>', unsafe_allow_html=True)
@@ -952,7 +982,7 @@ if dialog_api is not None:
             st.session_state[MESSAGES_KEY].append({"role": "user", "content": prompt})
             st.session_state[DRAFT_CLEAR_KEY] = True
             with st.spinner("Thinking..."):
-                _fetch_assistant_reply()
+                _fetch_assistant_reply(prompt)
             st.rerun()
 else:
     def _render_assistant_dialog() -> None:

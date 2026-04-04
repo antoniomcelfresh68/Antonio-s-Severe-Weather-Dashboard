@@ -3,8 +3,8 @@ import time
 from html import unescape
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
-import requests
 import streamlit as st
+from utils.resilience import probe_url, request_text
 
 USER_AGENT = "Antonio Severe Dashboard (contact: mcelfreshantonio@ou.edu)"
 HEADERS = {
@@ -52,22 +52,29 @@ def _with_cache_bust(url: str, bucket: int | None = None) -> str:
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner=False)
 def _fetch_text(url: str) -> str:
-    response = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
-    return response.text
+    text, _status = request_text(
+        url=url,
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
+        endpoint="spc.outlook.text",
+        source="NOAA/SPC outlook page",
+        cache_key=f"spc:text:{url}",
+    )
+    return text
 
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner=False)
 def _is_image_available(url: str) -> bool:
-    response = requests.get(url, headers=IMAGE_HEADERS, timeout=REQUEST_TIMEOUT, stream=True)
-    try:
-        response.raise_for_status()
-        content_type = (response.headers.get("Content-Type") or "").lower()
-        return content_type.startswith("image/")
-    except requests.RequestException:
-        return False
-    finally:
-        response.close()
+    available, _status = probe_url(
+        url=url,
+        headers=IMAGE_HEADERS,
+        timeout=REQUEST_TIMEOUT,
+        endpoint="spc.outlook.image_probe",
+        source="NOAA/SPC outlook imagery",
+        cache_key=f"spc:image_probe:{url}",
+        validator=lambda response: ((response.headers.get("Content-Type") or "").lower()).startswith("image/"),
+    )
+    return available
 
 
 def _extract_print_page_url(day: int, html: str) -> str | None:
@@ -89,7 +96,7 @@ def _resolve_print_fallback(day: int) -> str | None:
     page_url = OUTLOOK_PAGE_URLS[day]
     try:
         html = _fetch_text(page_url)
-    except requests.RequestException:
+    except Exception:
         return None
 
     direct_from_page = _extract_print_image_url(day, html, page_url)
@@ -102,7 +109,7 @@ def _resolve_print_fallback(day: int) -> str | None:
 
     try:
         print_html = _fetch_text(print_page_url)
-    except requests.RequestException:
+    except Exception:
         return None
 
     print_image_url = _extract_print_image_url(day, print_html, print_page_url)

@@ -1,7 +1,6 @@
 # utils/observations.py
 
 import streamlit as st
-import requests
 from typing import Any, Dict, Optional, Tuple
 import time
 from datetime import datetime, timezone
@@ -9,6 +8,7 @@ import math
 import streamlit.components.v1 as components
 from utils.ai_context import update_page_ai_context
 from utils.nws import get_nws_point_properties
+from utils.resilience import request_json
 from utils.satelite import render_satellite_panel
 
 HEADERS = {
@@ -30,9 +30,16 @@ def _get_nearest_radar_id(lat: float, lon: float) -> Optional[str]:
 
 @st.cache_data(ttl=120, show_spinner=False)
 def _get_json(url: str, timeout: int = 20) -> Dict[str, Any]:
-    r = requests.get(url, headers=HEADERS, timeout=timeout)
-    r.raise_for_status()
-    return r.json()
+    payload, _status = request_json(
+        url=url,
+        headers=HEADERS,
+        timeout=min(timeout, 8),
+        endpoint="nws.observations.generic",
+        source="NOAA/NWS observations",
+        cache_key=f"nws:json:{url}",
+        validator=lambda value: value if isinstance(value, dict) else {},
+    )
+    return payload
 
 def _safe(d: Dict[str, Any], *keys, default=None):
     cur = d

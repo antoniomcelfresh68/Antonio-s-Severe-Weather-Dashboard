@@ -1,14 +1,9 @@
 import streamlit as st
 
-
-def render() -> None:
-    st.subheader("About This Dashboard")
-
-    st.markdown(
-        """
+ABOUT_CONTENT_MARKDOWN = """
 ## Version
 
-Antonio's Severe Weather Dashboard v4.2.2 is a modular Streamlit application
+Antonio's Severe Weather Dashboard v4.2.3 is a modular Streamlit application
 built for fast, location-aware severe-weather situational awareness across the United States.
 
 ## Overview
@@ -77,7 +72,12 @@ updated visual design built around quick severe-weather scanning.
 - Additional observation and analysis layers
 - Release/versioning cleanup and deployment hardening
 """
-    )
+
+
+def render() -> None:
+    st.subheader("About This Dashboard")
+
+    st.markdown(ABOUT_CONTENT_MARKDOWN)
 
     st.markdown("---")
     st.caption(

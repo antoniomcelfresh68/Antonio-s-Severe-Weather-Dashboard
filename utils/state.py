@@ -5,7 +5,10 @@ from utils.ai_context import init_ai_context_state
 from utils.config import DEFAULT_CITY_KEY, CITY_PRESETS
 
 def init_state() -> None:
-    ## Initialize the Streamlit session state with default values, ensures every page load has a consistent starting point.
+    ## Initialize the Streamlit session state with default values.
+    ## This state is intentionally ephemeral: it keeps the current browser
+    ## session coherent, but it is not durable across process restarts or
+    ## across multiple Streamlit instances.
 
     init_ai_context_state()
 
@@ -21,7 +24,8 @@ def init_state() -> None:
         st.session_state.lon = float(lon)
 
 def set_location(city_key: str, lat: float, lon: float, source: str = "preset") -> None:
-    ## Update the session state with the selected city and its corresponding latitude and longitude.
+    ## Update the current session's selected location.
+    ## This is a convenience state update, not a durable preference store.
 
     st.session_state.city_key = city_key
     st.session_state.lat = float(lat)
